@@ -1,0 +1,50 @@
+@import '@lark-apaas/client-toolkit/lib/index.css';
+@import "tw-animate-css";
+@import "./tailwind-theme.css";
+@import "./typography.css";
+
+@source "../../node_modules/streamdown/dist/*.js";
+@config "../../tailwind.config.ts";
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #print-area,
+  #print-area * {
+    visibility: visible !important;
+  }
+  #print-area {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  #print-area .print-page {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    transform: none !important;
+    transform-origin: initial !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    page-break-after: always;
+    padding: 20mm !important;
+  }
+  #print-area .print-page:last-child {
+    page-break-after: auto;
+  }
+  #print-area .page-break-line {
+    display: none !important;
+  }
+  #print-area .page-number {
+    display: none !important;
+  }
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}

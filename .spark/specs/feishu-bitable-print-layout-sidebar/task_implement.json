@@ -1,0 +1,137 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "type": "app_init",
+      "name": "应用初始化任务",
+      "status": "completed",
+      "subtasks": [
+        "初始化布局导航文件Layout",
+        "初始化主题文件",
+        "初始化占位页面和路由"
+      ],
+      "requirements": [],
+      "write_scope": [
+        "client/src/components/Layout.tsx",
+        "client/src/tailwind-theme.css",
+        "client/src/app.tsx"
+      ],
+      "read_scope": [],
+      "acceptance": "项目基础框架初始化完成，路由、布局、主题配置就绪",
+      "dependencies": [],
+      "beginTime": 1783062025728,
+      "endTime": 1783062179626
+    },
+    {
+      "id": 2,
+      "name": "飞书多维表格查询插件开发",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取 plugin-guide skill",
+        "调用 plugin_instance 工具创建多维表格记录查询插件实例（基于 feishu-bitable 插件）",
+        "调用 get_plugin_ai_json 获取插件运行时投影，输出 Schema 摘录卡（inputSchema + outputSchema 字段明细）",
+        "根据投影生成前端调用代码骨架，集成到前端 api 层",
+        "验证调用代码：入参符合 Schema 要求、出参结构完整、错误处理逻辑完善"
+      ],
+      "requirements": [
+        "1.1"
+      ],
+      "write_scope": [
+        "server/capabilities/**",
+        "client/src/api/**"
+      ],
+      "read_scope": [
+        ".agent/skills/steering/nestjs-react-fullstack/plugin-guide/SKILL.md"
+      ],
+      "acceptance": "飞书多维表格查询插件实例创建完成，前端调用代码骨架符合 Schema 规范，可正常调用获取表格记录数据",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1783062179789,
+      "endTime": 1783062321748
+    },
+    {
+      "id": 3,
+      "name": "排版打印边栏工作台页面开发",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "配置当前页面路由和导航布局检查，适配 360px 边栏宽度约束",
+        "实现顶部紧凑排版控制面板：页边距下拉（窄/标准/宽）、字号滑块（小/中/大）、字段勾选列表折叠面板，所有控件横向排列",
+        "实现 A4 等比实时预览画布，带浅灰分页虚线与页码标注，支持上下滚动浏览多页",
+        "实现底部固定吸底操作栏：左侧显示当前设置摘要，右侧飞书蓝主按钮「打印」",
+        "集成飞书多维表格插件调用，加载当前选中记录或视图数据到预览区域",
+        "实现排版参数实时联动：调整页边距、字号、勾选字段时预览内容平滑更新，分页线位置实时重排",
+        "实现打印功能：点击「打印」按钮调用浏览器原生打印对话框，打印内容与预览完全一致",
+        "实现空状态：未选中任何记录时预览区显示引导提示",
+        "读取 animation-skill 实现交互动效：参数调整时预览平滑过渡，提升跟手感",
+        "代码级自查：所有交互符合需求，视觉风格匹配飞书设计语言，360px 宽度下布局正常"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.1",
+        "2.2",
+        "2.3",
+        "3.1",
+        "3.2",
+        "3.3"
+      ],
+      "write_scope": [
+        "client/src/pages/print-workbench/**",
+        "client/src/components/ui/**",
+        "shared/**"
+      ],
+      "read_scope": [
+        ".agent/skills/steering/nestjs-react-fullstack/coding-guide/SKILL.md",
+        ".agent/skills/animation-skill/SKILL.md",
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "边栏页面完整实现，排版调整实时联动，打印功能可正常调用浏览器原生打印，所有用户故事验证条件均满足",
+      "dependencies": [
+        1,
+        2
+      ],
+      "beginTime": 1783062321924,
+      "endTime": 1783062613705
+    },
+    {
+      "id": 4,
+      "name": "验收测试",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取 testing-guide skill",
+        "入口检查：访问 / 路径，边栏页面正常加载，无白屏或错误",
+        "核心验收目标1：打印预览功能——打开页面后显示A4比例预览区域，未选中记录时显示空状态引导，数据加载后正常渲染记录内容",
+        "核心验收目标2：排版调整功能——调整页边距、字号、勾选字段时预览内容实时更新，有即时视觉反馈",
+        "核心验收目标3：打印功能——点击「打印」按钮弹出浏览器原生打印对话框，打印内容与预览完全一致",
+        "非核心降级范围：飞书多维表格插件未配置时使用示例数据展示，不阻塞核心功能体验"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.1",
+        "2.2",
+        "2.3",
+        "3.1",
+        "3.2",
+        "3.3"
+      ],
+      "write_scope": [],
+      "read_scope": [
+        ".agent/skills/testing-guide/SKILL.md"
+      ],
+      "acceptance": "核心功能验收通过，所有用户故事验证条件均满足，可正常交付使用",
+      "dependencies": [
+        2,
+        3
+      ],
+      "beginTime": 1783062613881,
+      "endTime": 1783062804357
+    }
+  ]
+}
