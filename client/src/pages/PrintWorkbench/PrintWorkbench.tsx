@@ -11,28 +11,39 @@ import TemplateConfig from './TemplateConfig';
 
 type ViewMode = 'list' | 'preview' | 'config';
 
-const SAMPLE_RECORDS: Array<Record<string, unknown>> = [
+interface RecordWithId {
+  id: string;
+  record: Record<string, unknown>;
+}
+
+const SAMPLE_RECORDS: RecordWithId[] = [
   {
-    '客户名称': { text: '张三科技有限公司' },
-    '拜访日期': 1719792000000,
-    '跟进要点': { text: '讨论了Q3大客户回访计划，客户对新方案表示认可，希望在下周安排一次技术评审会议。' },
-    '联系人': { text: '李经理' },
-    '联系电话': '13800138000',
-    '预算金额': 150000,
-    '状态': '进行中',
-    '下次拜访': 1720396800000,
-    '备注': { text: '需要准备详细的技术方案文档，包含系统架构和实施时间表。' },
+    id: 'sample_1',
+    record: {
+      '客户名称': { text: '张三科技有限公司' },
+      '拜访日期': 1719792000000,
+      '跟进要点': { text: '讨论了 Q3 大客户回访计划，客户对新方案表示认可，希望在下周安排一次技术评审会议。' },
+      '联系人': { text: '李经理' },
+      '联系电话': '13800138000',
+      '预算金额': 150000,
+      '状态': '进行中',
+      '下次拜访': 1720396800000,
+      '备注': { text: '需要准备详细的技术方案文档，包含系统架构和实施时间表。' },
+    },
   },
   {
-    '客户名称': { text: '李四网络科技公司' },
-    '拜访日期': 1719878400000,
-    '跟进要点': { text: '客户提出了新的需求，关于系统集成方面的要求。' },
-    '联系人': { text: '王总监' },
-    '联系电话': '13900139000',
-    '预算金额': 280000,
-    '状态': '待确认',
-    '下次拜访': 1720483200000,
-    '备注': { text: '需要与技术团队讨论可行性方案。' },
+    id: 'sample_2',
+    record: {
+      '客户名称': { text: '李四网络科技公司' },
+      '拜访日期': 1719878400000,
+      '跟进要点': { text: '客户提出了新的需求，关于系统集成方面的要求。' },
+      '联系人': { text: '王总监' },
+      '联系电话': '13900139000',
+      '预算金额': 280000,
+      '状态': '待确认',
+      '下次拜访': 1720483200000,
+      '备注': { text: '需要与技术团队讨论可行性方案。' },
+    },
   },
 ];
 
@@ -73,17 +84,17 @@ const PrintWorkbench = () => {
   const [templates, setTemplates] = useState<PrintTemplate[]>([]);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
   const [allFields, setAllFields] = useState<string[]>([]);
-  const [records, setRecords] = useState<Array<Record<string, unknown>>>([]);
+  const [records, setRecords] = useState<RecordWithId[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        let loadedRecords: Array<Record<string, unknown>>;
+        let loadedRecords: RecordWithId[];
         if (bitable.isPluginConfigured()) {
           const result = await bitable.searchRecords({ pageSize: 50 });
-          loadedRecords = result.records.map((r) => r.record);
+          loadedRecords = result.records.map((r) => ({ id: r.id, record: r.record }));
           if (loadedRecords.length === 0) loadedRecords = SAMPLE_RECORDS;
         } else {
           loadedRecords = SAMPLE_RECORDS;
@@ -91,7 +102,7 @@ const PrintWorkbench = () => {
         setRecords(loadedRecords);
 
         const fieldSet = new Set<string>();
-        for (const record of loadedRecords) {
+        for (const { record } of loadedRecords) {
           for (const key of Object.keys(record)) {
             fieldSet.add(key);
           }
@@ -112,7 +123,7 @@ const PrintWorkbench = () => {
         const fallbackRecords = SAMPLE_RECORDS;
         setRecords(fallbackRecords);
         const fieldSet = new Set<string>();
-        for (const record of fallbackRecords) {
+        for (const { record } of fallbackRecords) {
           for (const key of Object.keys(record)) {
             fieldSet.add(key);
           }
@@ -235,7 +246,7 @@ const PrintWorkbench = () => {
     return (
       <TemplatePreview
         template={activeTemplate}
-        records={records}
+        recordsWithIds={records}
         onBack={() => setView('list')}
         onEdit={() => setView('config')}
       />
