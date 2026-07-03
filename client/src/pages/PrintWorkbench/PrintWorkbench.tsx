@@ -210,6 +210,17 @@ const PrintWorkbench = () => {
     [templates]
   );
 
+  const handleUpdateFields = useCallback(
+    (templateId: string, fields: string[]) => {
+      const newTemplates = templates.map((t) =>
+        t.id === templateId ? { ...t, fields } : t
+      );
+      setTemplates(newTemplates);
+      saveTemplates(newTemplates);
+    },
+    [templates]
+  );
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -247,8 +258,10 @@ const PrintWorkbench = () => {
       <TemplatePreview
         template={activeTemplate}
         recordsWithIds={records}
+        allFields={allFields}
         onBack={() => setView('list')}
         onEdit={() => setView('config')}
+        onUpdateFields={(fields) => handleUpdateFields(activeTemplate.id, fields)}
       />
     );
   }
