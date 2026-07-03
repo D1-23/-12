@@ -87,6 +87,9 @@ export async function searchRecords(
     const message =
       err instanceof Error ? err.message : String(err);
     logger.error(`searchRecords 调用失败: ${message}`);
+    if (message.includes('Config validation failed')) {
+      configError = true;
+    }
     throw err;
   }
 }
@@ -109,6 +112,9 @@ export async function getRecord(
     const message =
       err instanceof Error ? err.message : String(err);
     logger.error(`getRecord 调用失败: ${message}`);
+    if (message.includes('Config validation failed')) {
+      configError = true;
+    }
     throw err;
   }
 }

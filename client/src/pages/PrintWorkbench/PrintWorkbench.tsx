@@ -126,8 +126,8 @@ const PrintWorkbench = () => {
       />
 
       {!pluginAvailable && (
-        <div className="px-2 py-1 text-[10px] text-warning bg-warning/10 text-center">
-          多维表格未配置，当前显示示例数据
+        <div className="px-2 py-1.5 text-[10px] text-warning bg-warning/10 text-center leading-relaxed">
+          多维表格插件未配置完成，当前显示示例数据。请前往预览右侧的插件配置页面，选择目标多维表格并提交配置。
         </div>
       )}
 
