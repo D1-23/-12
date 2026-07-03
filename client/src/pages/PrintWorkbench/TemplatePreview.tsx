@@ -42,19 +42,34 @@ const TemplatePreview = ({
         import('jspdf'),
       ]);
 
-      const container = document.createElement('div');
-      container.style.cssText =
-        'position:fixed;left:-9999px;top:0;width:794px;background:#fff;';
-      container.innerHTML = content;
-      document.body.appendChild(container);
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText =
+        'position:fixed;left:-9999px;top:0;width:794px;height:5000px;border:none;visibility:hidden;';
+      document.body.appendChild(iframe);
 
-      const canvas = await html2canvas(container, {
+      const iframeDoc = iframe.contentDocument!;
+      iframeDoc.open();
+      iframeDoc.write(`<!DOCTYPE html><html><head><style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{width:794px;background:#fff;font-family:system-ui,-apple-system,sans-serif}
+      </style></head><body>${content}</body></html>`);
+      iframeDoc.close();
+
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (iframeDoc.readyState === 'complete') resolve();
+          else setTimeout(check, 50);
+        };
+        check();
+      });
+
+      const canvas = await html2canvas(iframeDoc.body, {
         scale: 2,
         useCORS: true,
         logging: false,
       });
 
-      document.body.removeChild(container);
+      document.body.removeChild(iframe);
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF('p', 'mm', 'a4');
