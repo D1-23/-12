@@ -37,8 +37,9 @@ export interface SearchRecordsParams {
   pageToken?: string;
 }
 
+const CONFIG_ERROR_KEY = 'bitable_plugin_config_error';
 let cachedPlugin: ReturnType<typeof capabilityClient.load> | null = null;
-let configError = false;
+let configError = sessionStorage.getItem(CONFIG_ERROR_KEY) === '1';
 
 function getPlugin() {
   if (configError) return null;
@@ -67,6 +68,7 @@ export function isPluginConfigured(): boolean {
 export function resetPluginCache(): void {
   cachedPlugin = null;
   configError = false;
+  sessionStorage.removeItem(CONFIG_ERROR_KEY);
 }
 
 export async function searchRecords(
@@ -89,6 +91,7 @@ export async function searchRecords(
     logger.error(`searchRecords 调用失败: ${message}`);
     if (message.includes('Config validation failed')) {
       configError = true;
+      sessionStorage.setItem(CONFIG_ERROR_KEY, '1');
     }
     throw err;
   }
@@ -114,6 +117,7 @@ export async function getRecord(
     logger.error(`getRecord 调用失败: ${message}`);
     if (message.includes('Config validation failed')) {
       configError = true;
+      sessionStorage.setItem(CONFIG_ERROR_KEY, '1');
     }
     throw err;
   }
