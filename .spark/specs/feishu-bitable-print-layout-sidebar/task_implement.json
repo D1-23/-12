@@ -54,7 +54,7 @@
     {
       "id": 3,
       "name": "排版打印边栏工作台页面开发",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "配置当前页面路由和导航布局检查，适配 360px 边栏宽度约束",
@@ -94,12 +94,13 @@
         1,
         2
       ],
-      "beginTime": 1783062321924
+      "beginTime": 1783062321924,
+      "endTime": 1783062613705
     },
     {
       "id": 4,
       "name": "验收测试",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取 testing-guide skill",
@@ -128,7 +129,8 @@
       "dependencies": [
         2,
         3
-      ]
+      ],
+      "beginTime": 1783062613881
     }
   ]
 }
