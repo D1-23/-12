@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, Printer, Settings, FileDown, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { logger } from '@lark-apaas/client-toolkit/logger';
@@ -7,6 +7,7 @@ import type { PrintTemplate } from '@/types/template';
 import { TEMPLATE_TYPE_LABELS } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
 import RecordSelector from './RecordSelector';
+import FieldSettingsDialog from './FieldSettingsDialog';
 
 interface RecordWithId {
   id: string;
@@ -16,21 +17,26 @@ interface RecordWithId {
 interface TemplatePreviewProps {
   template: PrintTemplate;
   recordsWithIds: RecordWithId[];
+  allFields: string[];
   onBack: () => void;
   onEdit: () => void;
+  onUpdateFields?: (fields: string[]) => void;
 }
 
 const TemplatePreview = ({
   template,
   recordsWithIds,
+  allFields,
   onBack,
   onEdit,
+  onUpdateFields,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set(recordsWithIds.map((r) => r.id))
   );
   const [showSelector, setShowSelector] = useState(false);
+  const [showFieldDialog, setShowFieldDialog] = useState(false);
 
   const filteredRecords = useMemo(
     () => recordsWithIds.filter((r) => selectedIds.has(r.id)).map((r) => r.record),
@@ -149,6 +155,15 @@ const TemplatePreview = ({
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
+          onClick={() => setShowFieldDialog(true)}
+        >
+          <SlidersHorizontal className="size-3.5" />
+          编辑
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs gap-1"
           onClick={onEdit}
         >
           <Settings className="size-3.5" />
@@ -225,6 +240,14 @@ const TemplatePreview = ({
       </div>
 
       <div id="print-area" className="hidden" />
+
+      <FieldSettingsDialog
+        open={showFieldDialog}
+        onOpenChange={setShowFieldDialog}
+        allFields={allFields}
+        enabledFields={template.fields}
+        onConfirm={(fields) => onUpdateFields?.(fields)}
+      />
     </div>
   );
 };

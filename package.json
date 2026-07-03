@@ -34,6 +34,7 @@
     "postinstall": "fullstack-cli action-plugin init"
   },
   "dependencies": {
+    "@dnd-kit/utilities": "^3.2.2",
     "@lark-apaas/fullstack-nestjs-core": "^1.1.22",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^10.4.20",
