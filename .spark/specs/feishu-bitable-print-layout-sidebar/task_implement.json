@@ -25,7 +25,7 @@
     {
       "id": 2,
       "name": "飞书多维表格查询插件开发",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取 plugin-guide skill",
@@ -48,12 +48,13 @@
       "dependencies": [
         1
       ],
-      "beginTime": 1783062179789
+      "beginTime": 1783062179789,
+      "endTime": 1783062321748
     },
     {
       "id": 3,
       "name": "排版打印边栏工作台页面开发",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "配置当前页面路由和导航布局检查，适配 360px 边栏宽度约束",
@@ -92,7 +93,8 @@
       "dependencies": [
         1,
         2
-      ]
+      ],
+      "beginTime": 1783062321924
     },
     {
       "id": 4,

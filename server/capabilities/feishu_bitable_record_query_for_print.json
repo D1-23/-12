@@ -1,0 +1,17 @@
+{
+  "id": "feishu_bitable_record_query_for_print",
+  "pluginKey": "@official-plugins/feishu-bitable",
+  "pluginVersion": "1.0.22",
+  "name": "飞书多维表格记录查询（打印专用）",
+  "description": "查询多维表格中的选中记录或视图数据，支持searchRecords和getRecord操作，获取表格字段和记录内容用于打印预览渲染",
+  "icon": "",
+  "paramsSchema": {},
+  "formValue": {
+    "tableID": "{{tableID}}",
+    "fields": "{{fields}}",
+    "appToken": "{{appToken}}"
+  },
+  "createdAt": 1783062225049,
+  "updatedAt": 1783062225049,
+  "createdBy": 7623683985687710684
+}
