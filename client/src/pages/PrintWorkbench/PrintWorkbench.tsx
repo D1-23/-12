@@ -90,7 +90,13 @@ const PrintWorkbench = () => {
         }
         setRecords(loadedRecords);
 
-        const fields = Object.keys(loadedRecords[0]);
+        const fieldSet = new Set<string>();
+        for (const record of loadedRecords) {
+          for (const key of Object.keys(record)) {
+            fieldSet.add(key);
+          }
+        }
+        const fields = Array.from(fieldSet);
         setAllFields(fields);
 
         const stored = loadTemplates();
@@ -105,7 +111,13 @@ const PrintWorkbench = () => {
         logger.error('加载数据失败', String(err));
         const fallbackRecords = SAMPLE_RECORDS;
         setRecords(fallbackRecords);
-        const fields = Object.keys(fallbackRecords[0]);
+        const fieldSet = new Set<string>();
+        for (const record of fallbackRecords) {
+          for (const key of Object.keys(record)) {
+            fieldSet.add(key);
+          }
+        }
+        const fields = Array.from(fieldSet);
         setAllFields(fields);
         const defaults = createDefaultTemplates(fields);
         setTemplates(defaults);
