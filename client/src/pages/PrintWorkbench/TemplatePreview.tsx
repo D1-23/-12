@@ -1,26 +1,58 @@
-import { useCallback, useRef } from 'react';
-import { ArrowLeft, Printer, Settings, FileDown } from 'lucide-react';
+import { useCallback, useRef, useState, useMemo } from 'react';
+import { ArrowLeft, Printer, Settings, FileDown, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import type { PrintTemplate } from '@/types/template';
 import { TEMPLATE_TYPE_LABELS } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
+import RecordSelector from './RecordSelector';
+
+interface RecordWithId {
+  id: string;
+  record: Record<string, unknown>;
+}
 
 interface TemplatePreviewProps {
   template: PrintTemplate;
-  records: Array<Record<string, unknown>>;
+  recordsWithIds: RecordWithId[];
   onBack: () => void;
   onEdit: () => void;
 }
 
 const TemplatePreview = ({
   template,
-  records,
+  recordsWithIds,
   onBack,
   onEdit,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(recordsWithIds.map((r) => r.id))
+  );
+  const [showSelector, setShowSelector] = useState(false);
+
+  const filteredRecords = useMemo(
+    () => recordsWithIds.filter((r) => selectedIds.has(r.id)).map((r) => r.record),
+    [recordsWithIds, selectedIds]
+  );
+
+  const handleToggle = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set(recordsWithIds.map((r) => r.id)));
+  }, [recordsWithIds]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
 
   const handlePrint = useCallback(() => {
     const content = previewRef.current?.getContent();
@@ -124,32 +156,58 @@ const TemplatePreview = ({
         </Button>
       </div>
 
-      <PreviewCanvas
-        ref={previewRef}
-        records={records}
-        enabledFields={template.fields}
-        margin={template.margin}
-        fontSize={template.fontSize}
-        mode={template.type}
-        titleField={template.titleField}
-      />
+      <div className="flex-1 relative overflow-hidden">
+        <PreviewCanvas
+          ref={previewRef}
+          records={filteredRecords}
+          enabledFields={template.fields}
+          margin={template.margin}
+          fontSize={template.fontSize}
+          mode={template.type}
+          titleField={template.titleField}
+        />
+        {showSelector && (
+          <RecordSelector
+            recordsWithIds={recordsWithIds}
+            selectedIds={selectedIds}
+            onToggle={handleToggle}
+            onSelectAll={handleSelectAll}
+            onDeselectAll={handleDeselectAll}
+            titleField={template.titleField}
+            onClose={() => setShowSelector(false)}
+          />
+        )}
+      </div>
 
-      {records.length === 0 && (
+      {filteredRecords.length === 0 && (
         <div className="px-2 py-1.5 text-[10px] text-warning bg-warning/10 text-center leading-relaxed">
-          暂无数据，请在多维表格中添加记录。
+          {recordsWithIds.length === 0
+            ? '暂无数据，请在多维表格中添加记录。'
+            : '未选择记录，请点击下方按钮选择要打印的记录。'}
         </div>
       )}
 
       <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card shrink-0">
         <span className="text-[11px] text-muted-foreground truncate flex-1">
-          {template.fields.length} 个字段 · {records.length} 条记录
+          {template.fields.length} 个字段 · {selectedIds.size}/{recordsWithIds.length} 条记录
         </span>
+        {template.type === 'record' && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1"
+            onClick={() => setShowSelector(true)}
+          >
+            <CheckSquare className="size-3.5" />
+            选择
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
           onClick={handleExportPdf}
-          disabled={records.length === 0 || template.fields.length === 0}
+          disabled={filteredRecords.length === 0 || template.fields.length === 0}
         >
           <FileDown className="size-3.5" />
           PDF
@@ -158,7 +216,7 @@ const TemplatePreview = ({
           size="sm"
           className="h-7 px-3 text-xs gap-1 bg-primary text-primary-foreground"
           onClick={handlePrint}
-          disabled={records.length === 0 || template.fields.length === 0}
+          disabled={filteredRecords.length === 0 || template.fields.length === 0}
           data-ai-section-type="button"
         >
           <Printer className="size-3.5" />

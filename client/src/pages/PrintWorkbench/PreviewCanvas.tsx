@@ -144,7 +144,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       return (
         <div
           key={pageIdx}
-          className="bg-card rounded-md shadow-sm overflow-hidden"
+          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: A4_WIDTH,
             minHeight: A4_HEIGHT,
@@ -174,8 +174,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               </span>
             </div>
           ))}
-          <div className="border-t border-dashed border-gray-300 mt-4 pt-1">
-            <span className="text-[10px] text-muted-foreground">
+          <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
+            <span className="page-number text-[10px] text-muted-foreground">
               第 {pageIdx + 1} / {pages.length} 页
             </span>
           </div>
@@ -189,7 +189,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       return (
         <div
           key={pageIdx}
-          className="bg-card rounded-md shadow-sm overflow-hidden"
+          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: A4_WIDTH,
             minHeight: A4_HEIGHT,
@@ -232,8 +232,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               ))}
             </tbody>
           </table>
-          <div className="border-t border-dashed border-gray-300 mt-4 pt-1">
-            <span className="text-[10px] text-muted-foreground">
+          <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
+            <span className="page-number text-[10px] text-muted-foreground">
               第 {pageIdx + 1} / {pages.length} 页
             </span>
           </div>
