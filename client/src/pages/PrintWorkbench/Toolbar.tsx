@@ -55,7 +55,7 @@ const Toolbar = ({
   const enabledCount = allFields.filter((f) => enabledFields[f]).length;
 
   return (
-    <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-card">
+    <div className="relative flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-card">
       <Select
         value={margin}
         onValueChange={(v) => onMarginChange(v as MarginOption)}
