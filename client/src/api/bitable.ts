@@ -39,7 +39,8 @@ export interface SearchRecordsParams {
 
 const CONFIG_ERROR_KEY = 'bitable_plugin_config_error';
 let cachedPlugin: ReturnType<typeof capabilityClient.load> | null = null;
-let configError = sessionStorage.getItem(CONFIG_ERROR_KEY) === '1';
+let configError = false;
+sessionStorage.removeItem(CONFIG_ERROR_KEY);
 
 function getPlugin() {
   if (configError) return null;
