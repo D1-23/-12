@@ -100,7 +100,7 @@
     {
       "id": 4,
       "name": "验收测试",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取 testing-guide skill",
@@ -130,7 +130,8 @@
         2,
         3
       ],
-      "beginTime": 1783062613881
+      "beginTime": 1783062613881,
+      "endTime": 1783062804357
     }
   ]
 }
