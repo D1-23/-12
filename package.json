@@ -36,6 +36,7 @@
   "dependencies": {
     "@dnd-kit/utilities": "^3.2.2",
     "@lark-apaas/fullstack-nestjs-core": "^1.1.22",
+    "@lark-base-open/js-sdk": "^1.0.2",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^10.4.20",
     "@nestjs/config": "^3.3.0",
