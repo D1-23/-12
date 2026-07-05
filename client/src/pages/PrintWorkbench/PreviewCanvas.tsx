@@ -23,12 +23,65 @@ const FIELD_ROW_LINE = 18;
 
 function formatFieldValue(value: unknown): string {
   if (value === null || value === undefined) return '';
+
+  // 纯文本对象 { text: 'xxx' }
   if (typeof value === 'object' && value !== null && 'text' in value) {
     return String((value as { text: unknown }).text ?? '');
   }
-  if (Array.isArray(value)) return value.join(', ');
+
+  // 单选 { id: string, text: string }
+  if (typeof value === 'object' && value !== null && 'id' in value && 'text' in value) {
+    return String((value as { text: unknown }).text ?? '');
+  }
+
+  // 用户/人员 { id: string, name: string, ... }
+  if (typeof value === 'object' && value !== null && 'name' in value) {
+    return String((value as { name: unknown }).name ?? '');
+  }
+
+  // 附件 { name: string, ... }
+  if (typeof value === 'object' && value !== null && 'name' in value) {
+    return String((value as { name: unknown }).name ?? '');
+  }
+
+  // 链接 { text: string, recordIds: string[], tableId: string }
+  if (typeof value === 'object' && value !== null && 'recordIds' in value) {
+    const link = value as { text?: unknown; recordIds?: string[] };
+    if (link.recordIds && link.recordIds.length > 0) {
+      return link.recordIds.join(', ');
+    }
+    return String(link.text ?? '');
+  }
+
+  // 多行文本段落数组 [{ type: 'text', text: 'xxx' }, ...]
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === 'object' && item !== null && 'text' in item) {
+          return String((item as { text: unknown }).text ?? '');
+        }
+        if (typeof item === 'object' && item !== null && 'name' in item) {
+          return String((item as { name: unknown }).name ?? '');
+        }
+        return String(item ?? '');
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+
   if (typeof value === 'number') return String(value);
-  return String(value);
+  if (typeof value === 'boolean') return value ? '是' : '否';
+
+  // 最后兜底转字符串
+  try {
+    const str = String(value);
+    if (str === '[object Object]') {
+      return JSON.stringify(value);
+    }
+    return str;
+  } catch {
+    return '';
+  }
 }
 
 function truncateText(text: string, maxLen: number): string {
