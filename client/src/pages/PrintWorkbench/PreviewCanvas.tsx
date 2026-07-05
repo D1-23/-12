@@ -183,59 +183,70 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           </div>
 
           {/* 表单网格 - 两列布局 */}
-          <table className="w-full border-collapse" style={{ fontSize: fs }}>
+          <table
+            className="w-full"
+            style={{
+              fontSize: fs,
+              borderCollapse: 'collapse',
+              border: '1px solid #d1d5db',
+            }}
+          >
             <tbody>
               {Array.from({ length: maxRows }).map((_, rowIdx) => {
                 const leftField = leftFields[rowIdx];
                 const rightField = rightFields[rowIdx];
+                const cellStyle = {
+                  border: '1px solid #d1d5db',
+                  padding: '8px 12px',
+                };
+                const labelStyle = {
+                  ...cellStyle,
+                  width: '15%',
+                  minWidth: 80,
+                  backgroundColor: '#f3f4f6',
+                  color: '#6b7280',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap' as const,
+                };
+                const valueStyle = {
+                  ...cellStyle,
+                  width: '35%',
+                  color: '#111827',
+                  wordBreak: 'break-word' as const,
+                };
+                const emptyStyle = {
+                  ...cellStyle,
+                  width: '15%',
+                };
+
                 return (
                   <tr key={rowIdx}>
                     {/* 左侧字段名 */}
-                    {leftField && (
+                    {leftField ? (
                       <>
-                        <td
-                          className="py-2 px-3 border border-border bg-accent/20 text-muted-foreground font-medium whitespace-nowrap"
-                          style={{ width: '15%', minWidth: 80 }}
-                        >
-                          {leftField}
-                        </td>
-                        <td
-                          className="py-2 px-3 border border-border text-foreground break-words"
-                          style={{ width: '35%' }}
-                        >
+                        <td style={labelStyle}>{leftField}</td>
+                        <td style={valueStyle}>
                           {formatFieldValue(record[leftField]) || '-'}
                         </td>
                       </>
-                    )}
-                    {/* 如果没有左侧字段，填充空单元格 */}
-                    {!leftField && (
+                    ) : (
                       <>
-                        <td className="border border-border" style={{ width: '15%' }}></td>
-                        <td className="border border-border" style={{ width: '35%' }}></td>
+                        <td style={emptyStyle}></td>
+                        <td style={emptyStyle}></td>
                       </>
                     )}
                     {/* 右侧字段名 */}
-                    {rightField && (
+                    {rightField ? (
                       <>
-                        <td
-                          className="py-2 px-3 border border-border bg-accent/20 text-muted-foreground font-medium whitespace-nowrap"
-                          style={{ width: '15%', minWidth: 80 }}
-                        >
-                          {rightField}
-                        </td>
-                        <td
-                          className="py-2 px-3 border border-border text-foreground break-words"
-                          style={{ width: '35%' }}
-                        >
+                        <td style={labelStyle}>{rightField}</td>
+                        <td style={valueStyle}>
                           {formatFieldValue(record[rightField]) || '-'}
                         </td>
                       </>
-                    )}
-                    {/* 如果没有右侧字段，填充空单元格 */}
-                    {!rightField && (
+                    ) : (
                       <>
-                        <td className="border border-border" style={{ width: '15%' }}></td>
-                        <td className="border border-border" style={{ width: '35%' }}></td>
+                        <td style={emptyStyle}></td>
+                        <td style={emptyStyle}></td>
                       </>
                     )}
                   </tr>
