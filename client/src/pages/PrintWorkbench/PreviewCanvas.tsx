@@ -157,11 +157,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       const { record } = item;
       const title = formatFieldValue(record[titleField]) || formatFieldValue(record['标题']) || formatFieldValue(record['客户名称']) || formatFieldValue(record['零件代码']) || '未命名记录';
 
-      // 将字段分成两列布局
-      const leftFields = enabledFields.filter((_, i) => i % 2 === 0);
-      const rightFields = enabledFields.filter((_, i) => i % 2 === 1);
-      const maxRows = Math.max(leftFields.length, rightFields.length);
-
       return (
         <div
           key={pageIdx}
@@ -182,7 +177,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             {title}
           </div>
 
-          {/* 表单网格 - 两列布局 */}
+          {/* 表单网格 - 单列表格 */}
           <table
             className="w-full"
             style={{
@@ -192,63 +187,33 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             }}
           >
             <tbody>
-              {Array.from({ length: maxRows }).map((_, rowIdx) => {
-                const leftField = leftFields[rowIdx];
-                const rightField = rightFields[rowIdx];
+              {enabledFields.map((field, idx) => {
                 const cellStyle = {
                   border: '1px solid #d1d5db',
-                  padding: '8px 12px',
+                  padding: '10px 12px',
+                  verticalAlign: 'top' as const,
                 };
                 const labelStyle = {
                   ...cellStyle,
-                  width: '15%',
-                  minWidth: 80,
+                  width: '25%',
                   backgroundColor: '#f3f4f6',
-                  color: '#6b7280',
+                  color: '#374151',
                   fontWeight: 500,
                   whiteSpace: 'nowrap' as const,
                 };
                 const valueStyle = {
                   ...cellStyle,
-                  width: '35%',
+                  width: '75%',
                   color: '#111827',
                   wordBreak: 'break-word' as const,
                 };
-                const emptyStyle = {
-                  ...cellStyle,
-                  width: '15%',
-                };
 
                 return (
-                  <tr key={rowIdx}>
-                    {/* 左侧字段名 */}
-                    {leftField ? (
-                      <>
-                        <td style={labelStyle}>{leftField}</td>
-                        <td style={valueStyle}>
-                          {formatFieldValue(record[leftField]) || '-'}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={emptyStyle}></td>
-                        <td style={emptyStyle}></td>
-                      </>
-                    )}
-                    {/* 右侧字段名 */}
-                    {rightField ? (
-                      <>
-                        <td style={labelStyle}>{rightField}</td>
-                        <td style={valueStyle}>
-                          {formatFieldValue(record[rightField]) || '-'}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={emptyStyle}></td>
-                        <td style={emptyStyle}></td>
-                      </>
-                    )}
+                  <tr key={idx}>
+                    <td style={labelStyle}>{field}</td>
+                    <td style={valueStyle}>
+                      {formatFieldValue(record[field]) || '-'}
+                    </td>
                   </tr>
                 );
               })}
