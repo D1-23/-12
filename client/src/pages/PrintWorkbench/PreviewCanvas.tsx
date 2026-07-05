@@ -88,35 +88,12 @@ interface PageInfo {
 
 function calculateRecordPages(
   records: Array<Record<string, unknown>>,
-  enabledFields: string[],
-  margin: MarginOption,
-  fontSize: FontSizeOption
+  _enabledFields: string[],
+  _margin: MarginOption,
+  _fontSize: FontSizeOption
 ): PageInfo[] {
-  const marginPx = MARGIN_VALUES[margin];
-  const contentHeight = A4_HEIGHT - marginPx * 2;
-  const fs = FONT_SIZES[fontSize];
-  const headerHeight = 36; // 表头高度
-  const rowHeight = fs * 1.8 + 12; // 数据行高度
-
-  const pages: PageInfo[] = [];
-  let currentItems: PageInfo['items'] = [];
-  let usedHeight = headerHeight;
-
-  for (const record of records) {
-    if (usedHeight + rowHeight > contentHeight && currentItems.length > 0) {
-      pages.push({ items: currentItems });
-      currentItems = [];
-      usedHeight = headerHeight;
-    }
-    currentItems.push({ record });
-    usedHeight += rowHeight;
-  }
-
-  if (currentItems.length > 0) {
-    pages.push({ items: currentItems });
-  }
-
-  return pages;
+  // 每个记录单独一页，渲染为表单卡片
+  return records.map((record) => ({ items: [{ record }] }));
 }
 
 function calculateViewPages(
@@ -175,6 +152,16 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const scaledWidth = A4_WIDTH * 0.39;
 
     const renderRecordPage = (page: PageInfo, pageIdx: number) => {
+      const item = page.items[0];
+      if (!item) return null;
+      const { record } = item;
+      const title = formatFieldValue(record[titleField]) || formatFieldValue(record['标题']) || formatFieldValue(record['客户名称']) || formatFieldValue(record['零件代码']) || '未命名记录';
+
+      // 将字段分成两列布局
+      const leftFields = enabledFields.filter((_, i) => i % 2 === 0);
+      const rightFields = enabledFields.filter((_, i) => i % 2 === 1);
+      const maxRows = Math.max(leftFields.length, rightFields.length);
+
       return (
         <div
           key={pageIdx}
@@ -187,40 +174,76 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             marginBottom: 30,
           }}
         >
+          {/* 标题 */}
+          <div
+            className="font-semibold mb-4 pb-2 border-b-2 border-foreground/20 text-foreground"
+            style={{ fontSize: fs + 2 }}
+          >
+            {title}
+          </div>
+
+          {/* 表单网格 - 两列布局 */}
           <table className="w-full border-collapse" style={{ fontSize: fs }}>
-            <thead>
-              <tr>
-                {enabledFields.map((field) => (
-                  <th
-                    key={field}
-                    className="text-left font-semibold py-2 px-2 border border-border bg-accent/30 text-muted-foreground whitespace-nowrap"
-                    style={{ maxWidth: `${(A4_WIDTH - marginPx * 2) / enabledFields.length}px` }}
-                  >
-                    {field}
-                  </th>
-                ))}
-              </tr>
-            </thead>
             <tbody>
-              {page.items.map((item, rowIdx) => (
-                <tr
-                  key={rowIdx}
-                  className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-accent/10'}
-                >
-                  {enabledFields.map((field) => (
-                    <td
-                      key={field}
-                      className="py-1.5 px-2 border border-border text-foreground break-words"
-                      style={{ maxWidth: `${(A4_WIDTH - marginPx * 2) / enabledFields.length}px` }}
-                      title={formatFieldValue(item.record[field])}
-                    >
-                      {formatFieldValue(item.record[field]) || '-'}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {Array.from({ length: maxRows }).map((_, rowIdx) => {
+                const leftField = leftFields[rowIdx];
+                const rightField = rightFields[rowIdx];
+                return (
+                  <tr key={rowIdx}>
+                    {/* 左侧字段名 */}
+                    {leftField && (
+                      <>
+                        <td
+                          className="py-2 px-3 border border-border bg-accent/20 text-muted-foreground font-medium whitespace-nowrap"
+                          style={{ width: '15%', minWidth: 80 }}
+                        >
+                          {leftField}
+                        </td>
+                        <td
+                          className="py-2 px-3 border border-border text-foreground break-words"
+                          style={{ width: '35%' }}
+                        >
+                          {formatFieldValue(record[leftField]) || '-'}
+                        </td>
+                      </>
+                    )}
+                    {/* 如果没有左侧字段，填充空单元格 */}
+                    {!leftField && (
+                      <>
+                        <td className="border border-border" style={{ width: '15%' }}></td>
+                        <td className="border border-border" style={{ width: '35%' }}></td>
+                      </>
+                    )}
+                    {/* 右侧字段名 */}
+                    {rightField && (
+                      <>
+                        <td
+                          className="py-2 px-3 border border-border bg-accent/20 text-muted-foreground font-medium whitespace-nowrap"
+                          style={{ width: '15%', minWidth: 80 }}
+                        >
+                          {rightField}
+                        </td>
+                        <td
+                          className="py-2 px-3 border border-border text-foreground break-words"
+                          style={{ width: '35%' }}
+                        >
+                          {formatFieldValue(record[rightField]) || '-'}
+                        </td>
+                      </>
+                    )}
+                    {/* 如果没有右侧字段，填充空单元格 */}
+                    {!rightField && (
+                      <>
+                        <td className="border border-border" style={{ width: '15%' }}></td>
+                        <td className="border border-border" style={{ width: '35%' }}></td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+
           <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
             <span className="page-number text-[10px] text-muted-foreground">
               第 {pageIdx + 1} / {pages.length} 页
