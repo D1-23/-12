@@ -24,6 +24,12 @@ const FIELD_ROW_LINE = 18;
 function formatFieldValue(value: unknown): string {
   if (value === null || value === undefined) return '';
 
+  // 多维表格标准字段结构 { bizType: 'Text', value: [...] }
+  if (typeof value === 'object' && value !== null && 'bizType' in value && 'value' in value) {
+    const typed = value as { bizType: string; value: unknown };
+    return formatFieldValue(typed.value);
+  }
+
   // 纯文本对象 { text: 'xxx' }
   if (typeof value === 'object' && value !== null && 'text' in value) {
     return String((value as { text: unknown }).text ?? '');
@@ -39,11 +45,6 @@ function formatFieldValue(value: unknown): string {
     return String((value as { name: unknown }).name ?? '');
   }
 
-  // 附件 { name: string, ... }
-  if (typeof value === 'object' && value !== null && 'name' in value) {
-    return String((value as { name: unknown }).name ?? '');
-  }
-
   // 链接 { text: string, recordIds: string[], tableId: string }
   if (typeof value === 'object' && value !== null && 'recordIds' in value) {
     const link = value as { text?: unknown; recordIds?: string[] };
@@ -53,18 +54,10 @@ function formatFieldValue(value: unknown): string {
     return String(link.text ?? '');
   }
 
-  // 多行文本段落数组 [{ type: 'text', text: 'xxx' }, ...]
+  // 数组处理（多选、多行文本段落等）
   if (Array.isArray(value)) {
     return value
-      .map((item) => {
-        if (typeof item === 'object' && item !== null && 'text' in item) {
-          return String((item as { text: unknown }).text ?? '');
-        }
-        if (typeof item === 'object' && item !== null && 'name' in item) {
-          return String((item as { name: unknown }).name ?? '');
-        }
-        return String(item ?? '');
-      })
+      .map((item) => formatFieldValue(item))
       .filter(Boolean)
       .join(', ');
   }
