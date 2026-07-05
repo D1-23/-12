@@ -95,32 +95,25 @@ function calculateRecordPages(
   const marginPx = MARGIN_VALUES[margin];
   const contentHeight = A4_HEIGHT - marginPx * 2;
   const fs = FONT_SIZES[fontSize];
-  const rowHeight = FIELD_ROW_BASE + (fs - 14) * 0.5;
-  const maxCharsPerLine = Math.floor((A4_WIDTH - marginPx * 2) / (fs * 0.55));
+  const headerHeight = 36; // 表头高度
+  const rowHeight = fs * 1.8 + 12; // 数据行高度
 
   const pages: PageInfo[] = [];
+  let currentItems: PageInfo['items'] = [];
+  let usedHeight = headerHeight;
 
   for (const record of records) {
-    let usedHeight = TITLE_HEIGHT;
-    let startField = 0;
-
-    for (let i = 0; i < enabledFields.length; i++) {
-      const rawValue = record[enabledFields[i]];
-      const text = formatFieldValue(rawValue);
-      const lineCount = Math.max(1, Math.ceil(text.length / Math.max(maxCharsPerLine, 1)));
-      const fieldHeight = rowHeight + Math.max(0, lineCount - 1) * FIELD_ROW_LINE;
-
-      if (usedHeight + fieldHeight > contentHeight && i > startField) {
-        pages.push({ items: [{ record, startField, endField: i }] });
-        startField = i;
-        usedHeight = TITLE_HEIGHT;
-      }
-      usedHeight += fieldHeight;
+    if (usedHeight + rowHeight > contentHeight && currentItems.length > 0) {
+      pages.push({ items: currentItems });
+      currentItems = [];
+      usedHeight = headerHeight;
     }
+    currentItems.push({ record });
+    usedHeight += rowHeight;
+  }
 
-    if (startField < enabledFields.length) {
-      pages.push({ items: [{ record, startField, endField: enabledFields.length }] });
-    }
+  if (currentItems.length > 0) {
+    pages.push({ items: currentItems });
   }
 
   return pages;
@@ -182,11 +175,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const scaledWidth = A4_WIDTH * 0.39;
 
     const renderRecordPage = (page: PageInfo, pageIdx: number) => {
-      const item = page.items[0];
-      if (!item) return null;
-      const { record, startField = 0, endField = enabledFields.length } = item;
-      const title = formatFieldValue(record[titleField]) || formatFieldValue(record['标题']) || formatFieldValue(record['客户名称']) || '未命名记录';
-
       return (
         <div
           key={pageIdx}
@@ -199,27 +187,40 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             marginBottom: 30,
           }}
         >
-          {startField === 0 && (
-            <div
-              className="font-semibold mb-3 pb-2 border-b border-border text-foreground truncate"
-              style={{ fontSize: fs + 4 }}
-            >
-              {title}
-            </div>
-          )}
-          {enabledFields.slice(startField, endField).map((field) => (
-            <div key={field} className="flex gap-2 py-1.5 border-b border-border/50">
-              <span
-                className="text-muted-foreground shrink-0 font-medium"
-                style={{ width: 72 }}
-              >
-                {field}
-              </span>
-              <span className="text-foreground break-words flex-1">
-                {formatFieldValue(record[field]) || '-'}
-              </span>
-            </div>
-          ))}
+          <table className="w-full border-collapse" style={{ fontSize: fs }}>
+            <thead>
+              <tr>
+                {enabledFields.map((field) => (
+                  <th
+                    key={field}
+                    className="text-left font-semibold py-2 px-2 border border-border bg-accent/30 text-muted-foreground whitespace-nowrap"
+                    style={{ maxWidth: `${(A4_WIDTH - marginPx * 2) / enabledFields.length}px` }}
+                  >
+                    {field}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {page.items.map((item, rowIdx) => (
+                <tr
+                  key={rowIdx}
+                  className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-accent/10'}
+                >
+                  {enabledFields.map((field) => (
+                    <td
+                      key={field}
+                      className="py-1.5 px-2 border border-border text-foreground break-words"
+                      style={{ maxWidth: `${(A4_WIDTH - marginPx * 2) / enabledFields.length}px` }}
+                      title={formatFieldValue(item.record[field])}
+                    >
+                      {formatFieldValue(item.record[field]) || '-'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
           <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
             <span className="page-number text-[10px] text-muted-foreground">
               第 {pageIdx + 1} / {pages.length} 页
