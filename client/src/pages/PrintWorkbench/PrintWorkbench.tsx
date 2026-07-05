@@ -5,6 +5,7 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { bitable } from '@/api';
 import type { PrintTemplate, TemplateType } from '@/types/template';
 import { loadTemplates, saveTemplates } from '@/types/template';
+import { useBitableSelection } from '@/hooks/useBitableSelection';
 import TemplateList from './TemplateList';
 import TemplatePreview from './TemplatePreview';
 import TemplateConfig from './TemplateConfig';
@@ -86,6 +87,7 @@ const PrintWorkbench = () => {
   const [allFields, setAllFields] = useState<string[]>([]);
   const [records, setRecords] = useState<RecordWithId[]>([]);
   const [loading, setLoading] = useState(true);
+  const { selectedRecord, available: sdkAvailable } = useBitableSelection();
 
   useEffect(() => {
     const loadData = async () => {
@@ -138,6 +140,29 @@ const PrintWorkbench = () => {
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (sdkAvailable && selectedRecord && view === 'list' && templates.length > 0) {
+      const first = templates[0];
+      setActiveTemplateId(first.id);
+      setView('preview');
+    }
+  }, [sdkAvailable, selectedRecord, view, templates]);
+
+  useEffect(() => {
+    if (sdkAvailable && selectedRecord) {
+      const newFields = Object.keys(selectedRecord.record);
+      setAllFields((prev) => {
+        const prevSet = new Set(prev);
+        let changed = false;
+        for (const f of newFields) {
+          if (!prevSet.has(f)) { changed = true; break; }
+        }
+        if (!changed && prev.length === newFields.length) return prev;
+        return newFields;
+      });
+    }
+  }, [sdkAvailable, selectedRecord]);
 
   const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
 
@@ -254,10 +279,13 @@ const PrintWorkbench = () => {
   }
 
   if (view === 'preview' && activeTemplate) {
+    const previewRecords = sdkAvailable && selectedRecord
+      ? [selectedRecord]
+      : records;
     return (
       <TemplatePreview
         template={activeTemplate}
-        recordsWithIds={records}
+        recordsWithIds={previewRecords}
         allFields={allFields}
         onBack={() => setView('list')}
         onEdit={() => setView('config')}

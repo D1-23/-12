@@ -19,69 +19,71 @@ export interface FeishuBitableRecordQueryForPrintGetrecordOutput {
   id: string;
   /** [object Object] */
   record?: {
-    '零件代码': {
-      text: string;
-    };
-    '逾期天数': unknown;
     '判责人一.直属上级': number[];
     '判责人三': number[];
-    '判责人四': number[];
-    'COGI累计条目': number;
-    '责任人一': number[];
-    '责任人二': number[];
-    '责任人二.直属上级': number[];
-    '责任人三': number[];
-    '判责人一直属上级': number[];
-    '判责人三直属上级': number[];
-    '判责人三直属上级.直属上级': number[];
-    '责任人二.部门': string[];
-    '责任人二直属上级': number[];
-    '责任人三直属上级.直属上级': number[];
-    'COGI开始日期（拉取）': unknown;
-    '判责人二': number[];
-    '判责人四.直属上级': number[];
-    '判责人四直属上级': number[];
+    '判责人三.直属上级': number[];
     '最后更新时间': number;
+    '单位': unknown;
     'COGI累计数量': number;
-    '责任人一.直属上级': number[];
-    '责任人三.部门': string[];
-    '当前升级对象': number[];
-    '判责人一': number[];
-    '判责人二直属上级.直属上级': number[];
-    '判责人四直属上级.直属上级': number[];
-    '记录创建时间': number;
-    '判责人一直属上级.直属上级': number[];
-    '判责人二直属上级': number[];
-    '工厂零件号': unknown;
-    'COGI创建时间（格式化）': unknown;
-    '持续时间区间': unknown;
-    '物料描述': unknown;
-    '后勤处理组': unknown;
-    '责任人一直属上级': number[];
-    '责任人三.直属上级': number[];
-    '责任人三直属上级': number[];
+    '责任人二.部门': string[];
     '状态': unknown;
-    '判责人二.直属上级': number[];
-    '工厂代码': unknown;
-    'COGI产生原因': string;
-    '责任人一直属上级.直属上级': number[];
+    '当前升级对象': number[];
+    '判责人二': number[];
+    '判责人二直属上级': number[];
+    '判责人四直属上级': number[];
+    '责任人一': number[];
+    '责任人一.直属上级': number[];
+    '责任人三直属上级': number[];
     '开始日期（格式）': {
       bizType: string;
       value: unknown;
     };
+    '责任人三直属上级.直属上级': number[];
     '计划完成日期': unknown;
-    '持续天数': number;
-    '判责人三.直属上级': number[];
-    '库控判责日期': number;
-    '单位': unknown;
+    '判责人一': number[];
+    '判责人一直属上级.直属上级': number[];
+    'COGI产生原因': string;
     '责任人一.部门': string[];
-    '责任人二直属上级.直属上级': number[];
-    'COGI创建时间': unknown;
+    '责任人二': number[];
+    '责任人三': number[];
+    '零件代码': {
+      text: string;
+    };
+    '物料描述': unknown;
+    '判责人二直属上级.直属上级': number[];
+    '记录创建时间': number;
+    '责任人三.部门': string[];
+    '持续天数': number;
+    'COGI开始日期（拉取）': unknown;
+    '判责人二.直属上级': number[];
+    '工厂代码': unknown;
+    '后勤处理组': unknown;
+    'COGI累计条目': number;
+    '责任人一直属上级': number[];
+    '判责人三直属上级': number[];
+    '判责人四': number[];
     '判责人是否可见': unknown;
+    '工厂零件号': unknown;
+    '责任人一直属上级.直属上级': number[];
+    '责任人三.直属上级': number[];
+    '逾期天数': unknown;
+    '判责人一直属上级': number[];
+    '判责人三直属上级.直属上级': number[];
+    '持续时间区间': unknown;
+    '判责人四直属上级.直属上级': number[];
+    '库控判责日期': number;
+    'COGI创建时间': unknown;
+    'COGI创建时间（格式化）': unknown;
+    '责任人二.直属上级': number[];
+    '责任人二直属上级': number[];
+    '责任人二直属上级.直属上级': number[];
+    '判责人四.直属上级': number[];
   };
 }
 
 export interface FeishuBitableRecordQueryForPrintSearchrecordsInput {
+  /** [object Object] */
+  fieldNames?: string[];
   /** [object Object] */
   sort?: {
     fieldName: string;
@@ -89,19 +91,17 @@ export interface FeishuBitableRecordQueryForPrintSearchrecordsInput {
   }[];
   /** [object Object] */
   filter?: {
+    conjunction: string;
     conditions: {
+      fieldName: string;
       operator: string;
       value: string[];
-      fieldName: string;
     }[];
-    conjunction: string;
   };
   /** [object Object] */
   pageToken?: string;
   /** [object Object] */
   pageSize?: number;
-  /** [object Object] */
-  fieldNames?: string[];
 }
 
 /**
@@ -120,65 +120,65 @@ export interface FeishuBitableRecordQueryForPrintSearchrecordsOutput {
   records: {
     id: string;
     record: {
-      '责任人二直属上级.直属上级': number[];
+      '持续时间区间': unknown;
+      '责任人二': number[];
+      '责任人三直属上级': number[];
       '状态': unknown;
-      '判责人二直属上级': number[];
-      '判责人三': number[];
+      '判责人一直属上级': number[];
+      '判责人四直属上级.直属上级': number[];
+      '记录创建时间': number;
+      '判责人一': number[];
+      '判责人二直属上级.直属上级': number[];
+      'COGI累计数量': number;
+      '责任人一.部门': string[];
+      '责任人二直属上级': number[];
+      '责任人三': number[];
+      '计划完成日期': unknown;
+      '持续天数': number;
+      '判责人二': number[];
       '判责人三直属上级.直属上级': number[];
+      '工厂代码': unknown;
+      '物料描述': unknown;
+      'COGI产生原因': string;
+      '责任人二.部门': string[];
+      '当前升级对象': number[];
+      '判责人一.直属上级': number[];
+      '单位': unknown;
+      '责任人一': number[];
+      '逾期天数': unknown;
+      '判责人二.直属上级': number[];
+      '库控判责日期': number;
+      '最后更新时间': number;
+      '判责人一直属上级.直属上级': number[];
+      '判责人三直属上级': number[];
       '零件代码': {
         text: string;
       };
-      '责任人三.部门': string[];
-      '持续天数': number;
-      '库控判责日期': number;
-      '物料描述': unknown;
-      '责任人二直属上级': number[];
-      '责任人三.直属上级': number[];
+      'COGI累计条目': number;
+      '责任人一直属上级.直属上级': number[];
+      '责任人二直属上级.直属上级': number[];
       '开始日期（格式）': {
         bizType: string;
         value: unknown;
       };
-      '判责人一.直属上级': number[];
-      '判责人三.直属上级': number[];
-      '判责人四直属上级': number[];
-      '判责人四直属上级.直属上级': number[];
-      '责任人一直属上级': number[];
-      '责任人一.部门': string[];
-      '判责人一直属上级': number[];
-      '判责人一直属上级.直属上级': number[];
-      '判责人三直属上级': number[];
-      '最后更新时间': number;
-      '判责人是否可见': unknown;
-      '工厂零件号': unknown;
-      'COGI累计条目': number;
+      'COGI开始日期（拉取）': unknown;
+      '责任人一.直属上级': number[];
       '责任人二.直属上级': number[];
+      '责任人三.直属上级': number[];
+      '判责人三.直属上级': number[];
+      '工厂零件号': unknown;
+      '责任人三.部门': string[];
       '责任人三直属上级.直属上级': number[];
-      '判责人二': number[];
-      '判责人二.直属上级': number[];
+      '判责人三': number[];
+      'COGI创建时间': unknown;
+      '判责人是否可见': unknown;
+      'COGI创建时间（格式化）': unknown;
+      '后勤处理组': unknown;
+      '责任人一直属上级': number[];
+      '判责人二直属上级': number[];
       '判责人四': number[];
       '判责人四.直属上级': number[];
-      '持续时间区间': unknown;
-      '责任人一': number[];
-      '后勤处理组': unknown;
-      '责任人二': number[];
-      '责任人三直属上级': number[];
-      '计划完成日期': unknown;
-      '逾期天数': unknown;
-      'COGI开始日期（拉取）': unknown;
-      '判责人一': number[];
-      '单位': unknown;
-      'COGI产生原因': string;
-      '责任人一直属上级.直属上级': number[];
-      '责任人二.部门': string[];
-      '当前升级对象': number[];
-      'COGI创建时间': unknown;
-      'COGI创建时间（格式化）': unknown;
-      'COGI累计数量': number;
-      '责任人一.直属上级': number[];
-      '责任人三': number[];
-      '判责人二直属上级.直属上级': number[];
-      '记录创建时间': number;
-      '工厂代码': unknown;
+      '判责人四直属上级': number[];
     };
   }[];
 }
