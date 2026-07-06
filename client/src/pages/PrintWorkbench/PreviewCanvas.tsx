@@ -2,7 +2,7 @@ import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
-import { layoutRecordPages, type PageLayout } from './layout-engine';
+import { layoutRecordPages, type PageLayout, type MergedRow } from './layout-engine';
 
 interface RecordPageLayout extends PageLayout {
   recordIndex: number;
@@ -181,39 +181,36 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       tableLayout: 'fixed',
     };
 
-    const renderMergedTable = (page: RecordPageLayout) => {
-      const col0 = page.columns[0] || [];
-      const col1 = page.columns[1] || [];
-      const maxRows = Math.max(col0.length, col1.length);
-      const fullWidthUnits = page.units.filter((u) => u.column === -1);
-
-      return (
-        <table style={tableStyle}>
-          <colgroup>
-            <col style={{ width: LABEL_WIDTH }} />
-            <col style={{ width: 'auto' }} />
-            <col style={{ width: LABEL_WIDTH }} />
-            <col style={{ width: 'auto' }} />
-          </colgroup>
-          <tbody>
-            {Array.from({ length: maxRows }, (_, rowIdx) => (
-              <tr key={`row-${rowIdx}`} className="field-row">
-                <td style={labelTdStyle}>{col0[rowIdx]?.field ?? ''}</td>
-                <td style={valueTdStyle}>{col0[rowIdx]?.value ?? ''}</td>
-                <td style={labelTdStyle}>{col1[rowIdx]?.field ?? ''}</td>
-                <td style={valueTdStyle}>{col1[rowIdx]?.value ?? ''}</td>
+    const renderMergedTable = (rows: MergedRow[]) => (
+      <table style={tableStyle}>
+        <colgroup>
+          <col style={{ width: LABEL_WIDTH }} />
+          <col style={{ width: 'auto' }} />
+          <col style={{ width: LABEL_WIDTH }} />
+          <col style={{ width: 'auto' }} />
+        </colgroup>
+        <tbody>
+          {rows.map((row, idx) => {
+            if (row.type === 'paired') {
+              return (
+                <tr key={`row-${idx}`} className="field-row">
+                  <td style={labelTdStyle}>{row.left?.field ?? ''}</td>
+                  <td style={valueTdStyle}>{row.left?.value ?? ''}</td>
+                  <td style={labelTdStyle}>{row.right?.field ?? ''}</td>
+                  <td style={valueTdStyle}>{row.right?.value ?? ''}</td>
+                </tr>
+              );
+            }
+            return (
+              <tr key={`row-${idx}`} className="field-row">
+                <td style={labelTdStyle}>{row.unit!.field}</td>
+                <td style={valueTdStyle} colSpan={3}>{row.unit!.value}</td>
               </tr>
-            ))}
-            {fullWidthUnits.map((unit, idx) => (
-              <tr key={`full-${idx}`} className="field-row">
-                <td style={labelTdStyle}>{unit.field}</td>
-                <td style={valueTdStyle} colSpan={3}>{unit.value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      );
-    };
+            );
+          })}
+        </tbody>
+      </table>
+    );
 
     const renderRecordPage = (page: RecordPageLayout, pageIdx: number) => {
       const record = records[page.recordIndex];
@@ -261,7 +258,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           )}
 
           <div style={{ flex: 1 }}>
-            {renderMergedTable(page)}
+            {renderMergedTable(page.rows)}
           </div>
 
           {page.isLast ? (
