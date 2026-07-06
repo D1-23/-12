@@ -43,9 +43,9 @@ export function calculateColumns(
   contentWidthMm: number,
 ): number {
   let columns: number;
-  if (fieldCount <= 15) {
+  if (fieldCount < 20) {
     columns = 2;
-  } else if (fieldCount <= 30) {
+  } else if (fieldCount < 40) {
     columns = 3;
   } else {
     columns = 4;
@@ -81,8 +81,8 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
 
   const units: FieldUnit[] = fields.map((field) => {
     const rawValue = record[field];
-    const formatted = formatFieldValue(rawValue);
     const type = fieldTypes[field];
+    const formatted = formatFieldValue(rawValue, type);
     const level = getFieldLevel(type, rawValue, formatted);
     const height = estimateUnitHeight(
       level,

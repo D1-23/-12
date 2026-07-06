@@ -1,7 +1,7 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
-import { formatFieldValue, getColumnGapPx, LABEL_WIDTH, LINE_HEIGHT, UNIT_GAP, UNIT_MIN_HEIGHT } from './field-utils';
+import { formatFieldValue, formatPrintTime, getColumnGapPx, LABEL_WIDTH, LINE_HEIGHT, UNIT_GAP, UNIT_MIN_HEIGHT } from './field-utils';
 import { layoutRecordPages, type PageLayout, type FieldUnit } from './layout-engine';
 
 export interface PreviewCanvasHandle {
@@ -214,10 +214,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         formatFieldValue(record['零件代码']) ||
         '未命名记录';
 
-      const printTime = new Date()
-        .toISOString()
-        .slice(0, 19)
-        .replace('T', ' ');
+      const printTime = formatPrintTime();
 
       return (
         <div
@@ -272,9 +269,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               }}
             >
               <span>
-                {tableName}
-                {tableName ? ' · ' : ''}
-                {printTime}
+                {tableName ? `Table Name: ${tableName}  ` : ''}
+                Print Time: {printTime}
               </span>
               <span>
                 第 {pageIdx + 1} / {totalPages} 页
