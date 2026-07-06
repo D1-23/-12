@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { FileText } from 'lucide-react';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
 import type { PrintTemplate, TemplateType } from '@/types/template';
@@ -98,12 +98,15 @@ const PrintWorkbench = () => {
   }, [loading]);
 
   useEffect(() => {
-    if (sdkAvailable && selectedRecord && view === 'list' && templates.length > 0) {
-      const first = templates[0];
-      setActiveTemplateId(first.id);
+    if (!sdkAvailable || !selectedRecord || templates.length === 0) return;
+    if (view === 'list' && autoSwitchedIdRef.current !== selectedRecord.id) {
+      autoSwitchedIdRef.current = selectedRecord.id;
+      setActiveTemplateId(templates[0].id);
       setView('preview');
     }
   }, [sdkAvailable, selectedRecord, view, templates]);
+
+  const autoSwitchedIdRef = useRef<string | null>(null);
 
   const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
 
