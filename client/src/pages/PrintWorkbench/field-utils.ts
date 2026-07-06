@@ -21,7 +21,15 @@ const FULL_WIDTH_TYPES = new Set<number>([
 
 const BLOCK_TYPES = new Set<number>([17]);
 
-export function formatFieldValue(value: unknown): string {
+const DATE_TYPES = new Set<number>([5, 1001, 1002]);
+
+function formatDate(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function formatFieldValue(value: unknown, fieldType?: number): string {
   if (value === null || value === undefined) return '';
 
   if (
@@ -31,7 +39,7 @@ export function formatFieldValue(value: unknown): string {
     'value' in value
   ) {
     const typed = value as { bizType: string; value: unknown };
-    return formatFieldValue(typed.value);
+    return formatFieldValue(typed.value, fieldType);
   }
 
   if (typeof value === 'object' && value !== null && 'text' in value) {
@@ -66,7 +74,12 @@ export function formatFieldValue(value: unknown): string {
       .join(', ');
   }
 
-  if (typeof value === 'number') return String(value);
+  if (typeof value === 'number') {
+    if (fieldType !== undefined && DATE_TYPES.has(fieldType)) {
+      return formatDate(value);
+    }
+    return String(value);
+  }
   if (typeof value === 'boolean') return value ? '是' : '否';
 
   try {
@@ -96,7 +109,7 @@ function isMultiValue(value: unknown): boolean {
 }
 
 function isLongText(formatted: string): boolean {
-  return formatted.length > 50 || formatted.includes('\n');
+  return formatted.length > 30 || formatted.includes('\n');
 }
 
 export function getFieldLevel(
@@ -120,7 +133,7 @@ export function getFieldLevel(
     return 'full';
   }
 
-  if (formattedValue.length > 80) return 'full';
+  if (formattedValue.length > 30) return 'full';
 
   return 'single';
 }
@@ -150,4 +163,10 @@ export function estimateUnitHeight(
 
 export function getColumnGapPx(): number {
   return Math.round(mmToPx(COLUMN_GAP_MM));
+}
+
+export function formatPrintTime(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
