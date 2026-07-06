@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal, Table } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { logger } from '@lark-apaas/client-toolkit/logger';
@@ -23,6 +23,7 @@ interface TemplatePreviewProps {
   onLoadAllRecords: () => void;
   onBack: () => void;
   onEdit: () => void;
+  onEditTable?: () => void;
   onUpdateFields?: (fields: string[]) => void;
 }
 
@@ -35,6 +36,7 @@ const TemplatePreview = ({
   onLoadAllRecords,
   onBack,
   onEdit,
+  onEditTable,
   onUpdateFields,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
@@ -202,6 +204,15 @@ const TemplatePreview = ({
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
+          onClick={onEditTable}
+        >
+          <Table className="size-3.5" />
+          表格
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs gap-1"
           onClick={onEdit}
         >
           <Settings className="size-3.5" />
@@ -221,6 +232,7 @@ const TemplatePreview = ({
           pageWidth={template.pageWidth}
           pageHeight={template.pageHeight}
           margins={template.margins}
+          tableLayout={template.tableLayout}
         />
         {showSelector && (
           <RecordSelector

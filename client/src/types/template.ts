@@ -11,6 +11,44 @@ export interface PageMargins {
   left: number;
 }
 
+export type CellAlign = 'left' | 'center' | 'right';
+
+export interface CellStyle {
+  bg?: string;
+  color?: string;
+  align?: CellAlign;
+  bold?: boolean;
+}
+
+export interface RowVisibilityRule {
+  field: string;
+  operator: 'eq' | 'neq' | 'empty' | 'notEmpty';
+  value?: string;
+}
+
+export interface MergedCell {
+  row: number;
+  col: number;
+  rowSpan: number;
+  colSpan: number;
+}
+
+export interface TableBorders {
+  show: boolean;
+  color: string;
+}
+
+export interface TableLayout {
+  headerRows: number;
+  footerRows: number;
+  colWidths: number[];
+  rowVisibility: Record<number, RowVisibilityRule>;
+  cellStyles: Record<string, CellStyle>;
+  mergedCells: MergedCell[];
+  borders: TableBorders;
+  tableContent?: string;
+}
+
 export interface PrintTemplate {
   id: string;
   name: string;
@@ -26,6 +64,7 @@ export interface PrintTemplate {
   pageWidth: number;
   pageHeight: number;
   margins: PageMargins;
+  tableLayout?: TableLayout;
 }
 
 export const MARGIN_LABELS: Record<MarginOption, string> = {
