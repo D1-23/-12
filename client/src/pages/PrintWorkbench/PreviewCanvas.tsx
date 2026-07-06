@@ -148,54 +148,65 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     const totalPages = mode === 'record' ? recordPages.length : viewPages.length;
 
-    const renderFieldUnit = (unit: FieldUnit, isFirst: boolean) => {
-      const isFullWidth = unit.level !== 'single';
+    const labelTdStyle: React.CSSProperties = {
+      width: LABEL_WIDTH,
+      background: '#F7F8FA',
+      border: '1px solid #E5E6EB',
+      padding: '5px 8px',
+      fontSize: 12,
+      color: '#1F2329',
+      lineHeight: '22px',
+      textAlign: 'left',
+      verticalAlign: 'top',
+      wordBreak: 'break-all',
+      overflowWrap: 'break-word',
+    };
 
-      const rowStyle: React.CSSProperties = {
-        display: 'flex',
-        width: '100%',
-        breakInside: 'avoid',
-        pageBreakInside: 'avoid',
-        overflow: 'hidden',
-        marginTop: isFirst ? 0 : -1,
-        columnSpan: isFullWidth ? 'all' : undefined,
-      };
+    const valueTdStyle: React.CSSProperties = {
+      background: '#FFFFFF',
+      border: '1px solid #E5E6EB',
+      padding: '5px 8px',
+      fontSize: 12,
+      color: '#1F2329',
+      lineHeight: '22px',
+      textAlign: 'left',
+      verticalAlign: 'top',
+      wordBreak: 'break-word',
+      overflowWrap: 'break-word',
+    };
 
-      const labelStyle: React.CSSProperties = {
-        minWidth: LABEL_WIDTH,
-        width: 'auto',
-        flexShrink: 0,
-        background: '#F7F8FA',
-        border: '1px solid #E5E6EB',
-        borderRight: 'none',
-        padding: '5px 8px',
-        fontSize: 12,
-        color: '#1F2329',
-        lineHeight: '22px',
-        textAlign: 'left',
-      };
+    const tableStyle: React.CSSProperties = {
+      borderCollapse: 'collapse',
+      width: '100%',
+      tableLayout: 'fixed',
+    };
 
-      const valueStyle: React.CSSProperties = {
-        flex: 1,
-        minWidth: 0,
-        background: '#FFFFFF',
-        border: '1px solid #E5E6EB',
-        padding: '5px 8px',
-        fontSize: 12,
-        color: '#1F2329',
-        lineHeight: '22px',
-        textAlign: 'left',
-        wordBreak: 'break-word',
-        overflowWrap: 'break-word',
-      };
-
+    const renderColumnTable = (units: FieldUnit[], colIdx: number) => {
+      if (units.length === 0) return null;
       return (
-        <div key={unit.field} className="field-row" style={rowStyle}>
-          <div style={labelStyle}>{unit.field}</div>
-          <div style={valueStyle}>{unit.value}</div>
-        </div>
+        <table key={`col-${colIdx}`} style={tableStyle}>
+          <tbody>
+            {units.map((unit) => (
+              <tr key={unit.field} className="field-row">
+                <td style={labelTdStyle}>{unit.field}</td>
+                <td style={valueTdStyle}>{unit.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       );
     };
+
+    const renderFullWidthTable = (unit: FieldUnit, idx: number) => (
+      <table key={`full-${idx}`} style={{ ...tableStyle, marginTop: idx === 0 ? 0 : -1 }}>
+        <tbody>
+          <tr className="field-row">
+            <td style={labelTdStyle}>{unit.field}</td>
+            <td style={valueTdStyle}>{unit.value}</td>
+          </tr>
+        </tbody>
+      </table>
+    );
 
     const renderRecordPage = (page: RecordPageLayout, pageIdx: number) => {
       const record = records[page.recordIndex];
@@ -242,16 +253,17 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             </div>
           )}
 
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                columns: 2,
-                columnGap: `${COLUMN_GAP_PX}px`,
-                columnFill: 'balance',
-              }}
-            >
-              {page.units.map((unit, idx) => renderFieldUnit(unit, idx === 0))}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', gap: `${COLUMN_GAP_PX}px`, alignItems: 'flex-start' }}>
+              {page.columns.map((colUnits, colIdx) => (
+                <div key={`col-wrap-${colIdx}`} style={{ flex: 1, minWidth: 0 }}>
+                  {renderColumnTable(colUnits, colIdx)}
+                </div>
+              ))}
             </div>
+            {page.units
+              .filter((u) => u.column === -1)
+              .map((unit, idx) => renderFullWidthTable(unit, idx))}
           </div>
 
           {page.isLast ? (
