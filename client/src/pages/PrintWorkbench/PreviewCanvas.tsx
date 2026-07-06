@@ -215,7 +215,14 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
                 };
 
                 return (
-                  <tr key={idx}>
+                  <tr
+                    key={idx}
+                    style={{
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      breakInside: 'avoid-page' as any,
+                      pageBreakInside: 'avoid' as any,
+                    }}
+                  >
                     <td style={labelStyle}>{field}</td>
                     <td style={valueStyle}>
                       {formatFieldValue(record[field]) || '-'}

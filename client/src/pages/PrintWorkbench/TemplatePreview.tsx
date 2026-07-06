@@ -71,8 +71,8 @@ const TemplatePreview = ({
   }, []);
 
   const handleExportPdf = useCallback(async () => {
-    const pageElements = previewRef.current?.getPageElements();
-    if (!pageElements || pageElements.length === 0) return;
+    const content = previewRef.current?.getContent();
+    if (!content) return;
 
     try {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -80,33 +80,46 @@ const TemplatePreview = ({
         import('jspdf'),
       ]);
 
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText =
+        'position:fixed;left:-9999px;top:0;width:794px;height:5000px;border:none;visibility:hidden;';
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentDocument!;
+      iframeDoc.open();
+      iframeDoc.write(`<!DOCTYPE html><html><head><style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{width:794px;background:#fff;font-family:system-ui,-apple-system,sans-serif}
+      </style></head><body>${content}</body></html>`);
+      iframeDoc.close();
+
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (iframeDoc.readyState === 'complete') resolve();
+          else setTimeout(check, 50);
+        };
+        check();
+      });
+
+      const pageElements = Array.from(
+        iframeDoc.querySelectorAll('.print-page')
+      ) as HTMLElement[];
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
 
       for (let i = 0; i < pageElements.length; i++) {
         const el = pageElements[i];
-        const clone = el.cloneNode(true) as HTMLElement;
-        clone.style.width = '794px';
-        clone.style.minHeight = '1123px';
-        clone.style.margin = '0';
-        clone.style.transform = 'none';
 
-        const wrapper = document.createElement('div');
-        wrapper.style.cssText =
-          'position:fixed;left:-9999px;top:0;width:794px;background:#fff;';
-        wrapper.appendChild(clone);
-        document.body.appendChild(wrapper);
-
-        const canvas = await html2canvas(clone, {
+        const canvas = await html2canvas(el as HTMLElement, {
           scale: 2,
           useCORS: true,
           logging: false,
           width: 794,
           height: 1123,
+          backgroundColor: '#ffffff',
         });
-
-        document.body.removeChild(wrapper);
 
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
@@ -115,6 +128,8 @@ const TemplatePreview = ({
         }
         pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
       }
+
+      document.body.removeChild(iframe);
 
       const dateStr = new Date().toISOString().slice(0, 10);
       pdf.save(`${template.name}_${dateStr}.pdf`);
