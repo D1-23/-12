@@ -68,17 +68,26 @@ export function useBitableData(): UseBitableDataResult {
 
   const fetchSelectedRecords = useCallback(async () => {
     try {
+      logger.info('fetchSelectedRecords: 开始获取选中记录');
       const selectedIds = await getSelectedRecordIds();
+      logger.info(`fetchSelectedRecords: 获取到 ${selectedIds.length} 个 ID`);
+
       const selectionKey = selectedIds.sort().join(',');
-      if (selectionKey === prevSelectionKeyRef.current) return;
+      if (selectionKey === prevSelectionKeyRef.current) {
+        logger.info('fetchSelectedRecords: 选择未变化，跳过更新');
+        return;
+      }
       prevSelectionKeyRef.current = selectionKey;
 
       if (selectedIds.length === 0) {
+        logger.info('fetchSelectedRecords: 无选中记录，清空状态');
         setSelectedRecords([]);
         return;
       }
 
+      logger.info(`fetchSelectedRecords: 开始获取 ${selectedIds.length} 条记录详情`);
       const records = await getRecordsByIds(selectedIds, fieldMapRef.current);
+      logger.info(`fetchSelectedRecords: 成功获取 ${records.length} 条记录`);
       setSelectedRecords(records);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
