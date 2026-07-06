@@ -250,10 +250,7 @@ const PrintWorkbench = () => {
       <TemplatePreview
         template={activeTemplate}
         recordsWithIds={defaultRecords}
-        allRecords={allRecords}
         allFields={allFields}
-        recordsLoading={recordsLoading}
-        onLoadAllRecords={loadAllRecords}
         onBack={() => setView('list')}
         onEdit={() => setView('config')}
         onEditTable={() => setView('editor')}
