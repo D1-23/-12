@@ -262,7 +262,7 @@ const TableEditor = ({ template, recordsWithIds, onSave, onBack }: TableEditorPr
         onOpenRowVisibility={openRowVisibility}
       />
 
-      <div className="flex-1 overflow-auto p-2 bg-background">
+      <div className="flex-1 overflow-hidden p-2 bg-background">
         <style dangerouslySetInnerHTML={{ __html: `
           .tiptap-table-editor {
             min-width: 320px;
