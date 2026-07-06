@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { X, Search, CheckSquare, Square } from 'lucide-react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { X, Search, CheckSquare, Square, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,7 +17,11 @@ interface RecordSelectorProps {
   onDeselectAll: () => void;
   titleField: string;
   onClose: () => void;
+  loading?: boolean;
 }
+
+const ROW_HEIGHT = 36;
+const OVERSCAN = 5;
 
 function formatFieldValue(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -48,8 +52,12 @@ const RecordSelector = ({
   onDeselectAll,
   titleField,
   onClose,
+  loading,
 }: RecordSelectorProps) => {
   const [search, setSearch] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(300);
 
   const filteredRecords = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -63,8 +71,36 @@ const RecordSelector = ({
     });
   }, [recordsWithIds, search]);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setViewportHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(el);
+    setViewportHeight(el.clientHeight);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (scrollRef.current) {
+      setScrollTop(scrollRef.current.scrollTop);
+    }
+  }, []);
+
+  const totalHeight = filteredRecords.length * ROW_HEIGHT;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
+  const endIndex = Math.min(
+    filteredRecords.length,
+    Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN
+  );
+  const visibleRecords = filteredRecords.slice(startIndex, endIndex);
+
   const selectedCount = selectedIds.size;
   const totalCount = recordsWithIds.length;
+  const filteredCount = filteredRecords.length;
   const isAllSelected = selectedCount === totalCount;
 
   return (
@@ -88,54 +124,74 @@ const RecordSelector = ({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
             className="h-6 px-2 text-[10px] gap-1"
             onClick={isAllSelected ? onDeselectAll : onSelectAll}
+            disabled={loading}
           >
             {isAllSelected ? <Square className="size-3" /> : <CheckSquare className="size-3" />}
             {isAllSelected ? '取消全选' : '全选'}
           </Button>
+          <span className="text-[10px] text-muted-foreground">
+            {loading ? '加载中...' : `共 ${filteredCount} 条`}
+          </span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-2">
-        {filteredRecords.length === 0 ? (
-          <div className="text-xs text-muted-foreground text-center py-4">
-            无匹配记录
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {filteredRecords.map(({ id, record }, idx) => {
-              const isChecked = selectedIds.has(id);
-              const summary = getRecordSummary(record, titleField);
-              return (
-                <div
-                  key={id}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                    isChecked ? 'bg-primary/5' : 'hover:bg-accent/50'
-                  }`}
-                  onClick={() => onToggle(id)}
-                >
-                  <Checkbox
-                    checked={isChecked}
-                    onCheckedChange={() => onToggle(id)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span className="text-[10px] text-muted-foreground w-5 text-right shrink-0">
-                    {idx + 1}
-                  </span>
-                  <span className="flex-1 text-xs text-foreground truncate">
-                    {summary}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {loading && recordsWithIds.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          <span className="text-xs text-muted-foreground ml-2">正在加载记录...</span>
+        </div>
+      ) : (
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-3 py-1"
+          onScroll={handleScroll}
+        >
+          {filteredCount === 0 ? (
+            <div className="text-xs text-muted-foreground text-center py-4">
+              无匹配记录
+            </div>
+          ) : (
+            <div style={{ height: totalHeight, position: 'relative' }}>
+              {visibleRecords.map((item, i) => {
+                const actualIndex = startIndex + i;
+                const isChecked = selectedIds.has(item.id);
+                const summary = getRecordSummary(item.record, titleField);
+                return (
+                  <div
+                    key={item.id}
+                    className={`absolute left-0 right-0 flex items-center gap-2 px-2 rounded cursor-pointer transition-colors ${
+                      isChecked ? 'bg-primary/5' : 'hover:bg-accent/50'
+                    }`}
+                    style={{
+                      top: actualIndex * ROW_HEIGHT,
+                      height: ROW_HEIGHT,
+                    }}
+                    onClick={() => onToggle(item.id)}
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => onToggle(item.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="text-[10px] text-muted-foreground w-5 text-right shrink-0">
+                      {actualIndex + 1}
+                    </span>
+                    <span className="flex-1 text-xs text-foreground truncate">
+                      {summary}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="px-3 py-2 border-t border-border bg-card shrink-0">
         <Button

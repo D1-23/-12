@@ -45,30 +45,55 @@ export async function getFieldMetaList(): Promise<FieldMeta[]> {
   }));
 }
 
-export async function getAllRecords(
+export interface RecordsPage {
+  records: BitableRecord[];
+  hasMore: boolean;
+  pageToken?: string;
+}
+
+function mapRecordFields(
+  rec: { recordId: string; fields: Record<string, unknown> },
   fieldMap: Map<string, string>
-): Promise<BitableRecord[]> {
+): BitableRecord {
+  const mapped: Record<string, unknown> = {};
+  if (rec.fields) {
+    for (const [fieldId, cellValue] of Object.entries(rec.fields)) {
+      const fieldName = fieldMap.get(fieldId) || fieldId;
+      mapped[fieldName] = cellValue;
+    }
+  }
+  return { id: rec.recordId, record: mapped };
+}
+
+export async function getRecordsByPage(
+  fieldMap: Map<string, string>,
+  pageToken?: string
+): Promise<RecordsPage> {
   const sdk = await getSDK();
   if (!sdk) throw new Error('Bitable SDK 不可用');
 
   const table = await sdk.base.getActiveTable();
+  const result = await table.getRecords({ pageSize: 500, pageToken });
+  const records = result.records.map((rec) => mapRecordFields(rec, fieldMap));
+
+  return {
+    records,
+    hasMore: result.hasMore,
+    pageToken: result.hasMore ? result.pageToken : undefined,
+  };
+}
+
+export async function getAllRecords(
+  fieldMap: Map<string, string>
+): Promise<BitableRecord[]> {
   const allRecords: BitableRecord[] = [];
-  let pageToken: string | undefined;
+  let token: string | undefined;
 
   do {
-    const result = await table.getRecords({ pageSize: 500, pageToken });
-    for (const rec of result.records) {
-      const mapped: Record<string, unknown> = {};
-      if (rec.fields) {
-        for (const [fieldId, cellValue] of Object.entries(rec.fields)) {
-          const fieldName = fieldMap.get(fieldId) || fieldId;
-          mapped[fieldName] = cellValue;
-        }
-      }
-      allRecords.push({ id: rec.recordId, record: mapped });
-    }
-    pageToken = result.hasMore ? result.pageToken : undefined;
-  } while (pageToken);
+    const page = await getRecordsByPage(fieldMap, token);
+    allRecords.push(...page.records);
+    token = page.pageToken;
+  } while (token);
 
   return allRecords;
 }

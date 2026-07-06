@@ -1,30 +1,32 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import {
-  getAllRecords,
+  getRecordsByPage,
   getFieldMetaList,
   getRecordById,
   type BitableRecord,
 } from '@/api/bitable';
 
 interface UseBitableDataResult {
-  records: BitableRecord[];
-  allFields: string[];
   selectedRecord: BitableRecord | null;
+  allFields: string[];
+  allRecords: BitableRecord[];
+  recordsLoading: boolean;
   sdkAvailable: boolean;
   loading: boolean;
-  reload: () => void;
+  loadAllRecords: () => void;
 }
 
 export function useBitableData(): UseBitableDataResult {
-  const [records, setRecords] = useState<BitableRecord[]>([]);
   const [allFields, setAllFields] = useState<string[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<BitableRecord | null>(null);
+  const [allRecords, setAllRecords] = useState<BitableRecord[]>([]);
+  const [recordsLoading, setRecordsLoading] = useState(false);
   const [sdkAvailable, setSdkAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const fieldMapRef = useRef<Map<string, string>>(new Map());
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const reloadFlag = useRef(0);
+  const allRecordsLoadedRef = useRef(false);
 
   const fetchSelectedRecord = useCallback(async (recordId: string) => {
     try {
@@ -36,40 +38,46 @@ export function useBitableData(): UseBitableDataResult {
     }
   }, []);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadAllRecords = useCallback(async () => {
+    if (allRecordsLoadedRef.current || recordsLoading) return;
+    setRecordsLoading(true);
     try {
-      const metaList = await getFieldMetaList();
-      const map = new Map<string, string>();
-      for (const m of metaList) {
-        map.set(m.id, m.name);
-      }
-      fieldMapRef.current = map;
+      const collected: BitableRecord[] = [];
+      let token: string | undefined;
 
-      const fieldNames = metaList.map((m) => m.name);
-      setAllFields(fieldNames);
+      do {
+        const page = await getRecordsByPage(fieldMapRef.current, token);
+        collected.push(...page.records);
+        setAllRecords([...collected]);
+        token = page.pageToken;
+      } while (token);
 
-      const allRecs = await getAllRecords(map);
-      setRecords(allRecs);
-
-      setSdkAvailable(true);
+      allRecordsLoadedRef.current = true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      logger.warn(`Bitable 数据加载失败，降级为 demo 模式: ${msg}`);
-      setSdkAvailable(false);
+      logger.error(`全量记录加载失败: ${msg}`);
     } finally {
-      setLoading(false);
+      setRecordsLoading(false);
     }
-  }, []);
+  }, [recordsLoading]);
 
   useEffect(() => {
     let cancelled = false;
 
     const init = async () => {
-      await loadData();
-      if (cancelled) return;
-
+      setLoading(true);
       try {
+        const metaList = await getFieldMetaList();
+        if (cancelled) return;
+
+        const map = new Map<string, string>();
+        for (const m of metaList) {
+          map.set(m.id, m.name);
+        }
+        fieldMapRef.current = map;
+        setAllFields(metaList.map((m) => m.name));
+        setSdkAvailable(true);
+
         const { bitable: sdk } = await import('@lark-base-open/js-sdk');
         const selection = await sdk.base.getSelection();
         if (cancelled) return;
@@ -94,7 +102,10 @@ export function useBitableData(): UseBitableDataResult {
       } catch (err: unknown) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
-        logger.warn(`Bitable 选中监听初始化失败: ${msg}`);
+        logger.warn(`Bitable 初始化失败: ${msg}`);
+        setSdkAvailable(false);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
 
@@ -105,19 +116,15 @@ export function useBitableData(): UseBitableDataResult {
       unsubscribeRef.current?.();
       unsubscribeRef.current = null;
     };
-  }, [loadData, fetchSelectedRecord, reloadFlag.current]);
-
-  const reload = useCallback(() => {
-    reloadFlag.current += 1;
-    loadData();
-  }, [loadData]);
+  }, [fetchSelectedRecord]);
 
   return {
-    records,
-    allFields,
     selectedRecord,
+    allFields,
+    allRecords,
+    recordsLoading,
     sdkAvailable,
     loading,
-    reload,
+    loadAllRecords,
   };
 }

@@ -17,7 +17,10 @@ interface RecordWithId {
 interface TemplatePreviewProps {
   template: PrintTemplate;
   recordsWithIds: RecordWithId[];
+  allRecords: RecordWithId[];
   allFields: string[];
+  recordsLoading: boolean;
+  onLoadAllRecords: () => void;
   onBack: () => void;
   onEdit: () => void;
   onUpdateFields?: (fields: string[]) => void;
@@ -26,7 +29,10 @@ interface TemplatePreviewProps {
 const TemplatePreview = ({
   template,
   recordsWithIds,
+  allRecords,
   allFields,
+  recordsLoading,
+  onLoadAllRecords,
   onBack,
   onEdit,
   onUpdateFields,
@@ -192,13 +198,14 @@ const TemplatePreview = ({
         />
         {showSelector && (
           <RecordSelector
-            recordsWithIds={recordsWithIds}
+            recordsWithIds={allRecords.length > 0 ? allRecords : recordsWithIds}
             selectedIds={selectedIds}
             onToggle={handleToggle}
             onSelectAll={handleSelectAll}
             onDeselectAll={handleDeselectAll}
             titleField={template.titleField}
             onClose={() => setShowSelector(false)}
+            loading={recordsLoading}
           />
         )}
       </div>
@@ -215,17 +222,18 @@ const TemplatePreview = ({
         <span className="text-[11px] text-muted-foreground truncate flex-1">
           {template.fields.length} 个字段 · {selectedIds.size}/{recordsWithIds.length} 条记录
         </span>
-        {template.type === 'record' && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 px-2 text-xs gap-1"
-            onClick={() => setShowSelector(true)}
-          >
-            <CheckSquare className="size-3.5" />
-            选择
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs gap-1"
+          onClick={() => {
+            setShowSelector(true);
+            onLoadAllRecords();
+          }}
+        >
+          <CheckSquare className="size-3.5" />
+          选择
+        </Button>
         <Button
           variant="outline"
           size="sm"

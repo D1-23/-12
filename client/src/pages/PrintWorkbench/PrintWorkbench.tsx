@@ -69,17 +69,19 @@ const PrintWorkbench = () => {
   const [templates, setTemplates] = useState<PrintTemplate[]>([]);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
   const {
-    records,
-    allFields,
     selectedRecord,
+    allFields,
+    allRecords,
+    recordsLoading,
     sdkAvailable,
     loading,
+    loadAllRecords,
   } = useBitableData();
 
   useEffect(() => {
     const initTemplates = () => {
       if (loading) return;
-      const fields = allFields.length > 0 ? allFields : extractFieldsFromRecords(records);
+      const fields = allFields.length > 0 ? allFields : extractFieldsFromRecords(allRecords);
       const stored = loadTemplates().map(migrateTemplate);
       if (stored.length > 0) {
         setTemplates(stored);
@@ -223,14 +225,17 @@ const PrintWorkbench = () => {
   }
 
   if (view === 'preview' && activeTemplate) {
-    const previewRecords = sdkAvailable && selectedRecord
+    const defaultRecords = sdkAvailable && selectedRecord
       ? [selectedRecord]
-      : records;
+      : allRecords;
     return (
       <TemplatePreview
         template={activeTemplate}
-        recordsWithIds={previewRecords}
+        recordsWithIds={defaultRecords}
+        allRecords={allRecords}
         allFields={allFields}
+        recordsLoading={recordsLoading}
+        onLoadAllRecords={loadAllRecords}
         onBack={() => setView('list')}
         onEdit={() => setView('config')}
         onUpdateFields={(fields) => handleUpdateFields(activeTemplate.id, fields)}
