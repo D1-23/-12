@@ -72,10 +72,9 @@ const PrintWorkbench = () => {
     selectedRecord,
     allFields,
     allRecords,
-    recordsLoading,
     sdkAvailable,
     loading,
-    loadAllRecords,
+    selectedRecords,
   } = useBitableData();
 
   useEffect(() => {
@@ -235,10 +234,8 @@ const PrintWorkbench = () => {
       <TemplatePreview
         template={activeTemplate}
         recordsWithIds={defaultRecords}
-        allRecords={allRecords}
+        selectedRecords={selectedRecords}
         allFields={allFields}
-        recordsLoading={recordsLoading}
-        onLoadAllRecords={loadAllRecords}
         onBack={() => setView('list')}
         onEdit={() => setView('config')}
         onUpdateFields={(fields) => handleUpdateFields(activeTemplate.id, fields)}
