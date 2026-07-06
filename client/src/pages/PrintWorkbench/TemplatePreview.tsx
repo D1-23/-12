@@ -209,7 +209,7 @@ const TemplatePreview = ({
         </Button>
       </div>
 
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-auto">
         <PreviewCanvas
           ref={previewRef}
           records={displayRecords}
