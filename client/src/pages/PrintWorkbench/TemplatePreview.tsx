@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useRef, useState, useMemo } from 'react';
 import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,27 +38,25 @@ const TemplatePreview = ({
   onUpdateFields,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(recordsWithIds.map((r) => r.id))
-  );
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(new Set());
   const [showSelector, setShowSelector] = useState(false);
   const [showFieldDialog, setShowFieldDialog] = useState(false);
-  const hasInitSelectedRef = useRef(false);
 
-  useEffect(() => {
-    if (!hasInitSelectedRef.current && recordsWithIds.length > 0) {
-      hasInitSelectedRef.current = true;
-      setSelectedIds(new Set(recordsWithIds.map((r) => r.id)));
+  const displayRecords = useMemo(() => {
+    if (batchMode) {
+      return allRecords
+        .filter((r) => batchSelectedIds.has(r.id))
+        .map((r) => r.record);
     }
-  }, [recordsWithIds]);
+    return recordsWithIds.map((r) => r.record);
+  }, [batchMode, batchSelectedIds, allRecords, recordsWithIds]);
 
-  const filteredRecords = useMemo(
-    () => recordsWithIds.filter((r) => selectedIds.has(r.id)).map((r) => r.record),
-    [recordsWithIds, selectedIds]
-  );
+  const displayCount = displayRecords.length;
+  const totalBatchCount = allRecords.length > 0 ? allRecords.length : recordsWithIds.length;
 
-  const handleToggle = useCallback((id: string) => {
-    setSelectedIds((prev) => {
+  const handleBatchToggle = useCallback((id: string) => {
+    setBatchSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -66,13 +64,31 @@ const TemplatePreview = ({
     });
   }, []);
 
-  const handleSelectAll = useCallback(() => {
-    setSelectedIds(new Set(recordsWithIds.map((r) => r.id)));
-  }, [recordsWithIds]);
+  const handleBatchSelectAll = useCallback(() => {
+    const source = allRecords.length > 0 ? allRecords : recordsWithIds;
+    setBatchSelectedIds(new Set(source.map((r) => r.id)));
+  }, [allRecords, recordsWithIds]);
 
-  const handleDeselectAll = useCallback(() => {
-    setSelectedIds(new Set());
+  const handleBatchDeselectAll = useCallback(() => {
+    setBatchSelectedIds(new Set());
   }, []);
+
+  const handleOpenSelector = useCallback(() => {
+    setShowSelector(true);
+    onLoadAllRecords();
+    if (!batchMode) {
+      setBatchMode(true);
+      const ids = allRecords.length > 0 ? allRecords : recordsWithIds;
+      setBatchSelectedIds(new Set(ids.map((r) => r.id)));
+    }
+  }, [onLoadAllRecords, batchMode, allRecords, recordsWithIds]);
+
+  const handleCloseSelector = useCallback(() => {
+    setShowSelector(false);
+    if (batchSelectedIds.size === 0) {
+      setBatchMode(false);
+    }
+  }, [batchSelectedIds.size]);
 
   const handlePrint = useCallback(() => {
     const content = previewRef.current?.getContent();
@@ -157,6 +173,8 @@ const TemplatePreview = ({
     }
   }, [template]);
 
+  const selectorSource = allRecords.length > 0 ? allRecords : recordsWithIds;
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card shrink-0">
@@ -194,7 +212,7 @@ const TemplatePreview = ({
       <div className="flex-1 relative overflow-hidden">
         <PreviewCanvas
           ref={previewRef}
-          records={filteredRecords}
+          records={displayRecords}
           enabledFields={template.fields}
           margin={template.margin}
           fontSize={template.fontSize}
@@ -206,48 +224,49 @@ const TemplatePreview = ({
         />
         {showSelector && (
           <RecordSelector
-            recordsWithIds={allRecords.length > 0 ? allRecords : recordsWithIds}
-            selectedIds={selectedIds}
-            onToggle={handleToggle}
-            onSelectAll={handleSelectAll}
-            onDeselectAll={handleDeselectAll}
+            recordsWithIds={selectorSource}
+            selectedIds={batchSelectedIds}
+            onToggle={handleBatchToggle}
+            onSelectAll={handleBatchSelectAll}
+            onDeselectAll={handleBatchDeselectAll}
             titleField={template.titleField}
-            onClose={() => setShowSelector(false)}
+            onClose={handleCloseSelector}
             loading={recordsLoading}
           />
         )}
       </div>
 
-      {filteredRecords.length === 0 && (
+      {displayCount === 0 && (
         <div className="px-2 py-1.5 text-[10px] text-warning bg-warning/10 text-center leading-relaxed">
           {recordsWithIds.length === 0
             ? '暂无数据，请在多维表格中添加记录。'
-            : '未选择记录，请点击下方按钮选择要打印的记录。'}
+            : batchMode
+              ? '未选择记录，请点击下方按钮选择要打印的记录。'
+              : '请在多维表格中点击选择一条记录。'}
         </div>
       )}
 
       <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card shrink-0">
         <span className="text-[11px] text-muted-foreground truncate flex-1">
-          {template.fields.length} 个字段 · {selectedIds.size}/{recordsWithIds.length} 条记录
+          {template.fields.length} 个字段 · {batchMode
+            ? `${batchSelectedIds.size}/${totalBatchCount} 条记录`
+            : `${recordsWithIds.length > 0 ? 1 : 0} 条记录`}
         </span>
         <Button
           variant="outline"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
-          onClick={() => {
-            setShowSelector(true);
-            onLoadAllRecords();
-          }}
+          onClick={handleOpenSelector}
         >
           <CheckSquare className="size-3.5" />
-          选择
+          {batchMode ? '已选' : '选择'}
         </Button>
         <Button
           variant="outline"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
           onClick={handleExportPdf}
-          disabled={filteredRecords.length === 0 || template.fields.length === 0}
+          disabled={displayCount === 0 || template.fields.length === 0}
         >
           <FileDown className="size-3.5" />
           PDF
@@ -256,7 +275,7 @@ const TemplatePreview = ({
           size="sm"
           className="h-7 px-3 text-xs gap-1 bg-primary text-primary-foreground"
           onClick={handlePrint}
-          disabled={filteredRecords.length === 0 || template.fields.length === 0}
+          disabled={displayCount === 0 || template.fields.length === 0}
           data-ai-section-type="button"
         >
           <Printer className="size-3.5" />
