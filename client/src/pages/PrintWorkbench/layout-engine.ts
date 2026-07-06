@@ -3,7 +3,6 @@ import {
   getFieldLevel,
   estimateUnitHeight,
   LABEL_WIDTH,
-  COLUMN_GAP_PX,
   type FieldLevel,
 } from './field-utils';
 import { mmToPx } from '@/types/template';
@@ -13,12 +12,18 @@ export interface FieldUnit {
   value: string;
   level: FieldLevel;
   height: number;
-  column: number;
+}
+
+export interface MergedRow {
+  type: 'paired' | 'full';
+  height: number;
+  left?: FieldUnit;
+  right?: FieldUnit;
+  unit?: FieldUnit;
 }
 
 export interface PageLayout {
-  units: FieldUnit[];
-  columns: FieldUnit[][];
+  rows: MergedRow[];
   pageNumber: number;
   isFirst: boolean;
   isLast: boolean;
@@ -34,6 +39,8 @@ export interface LayoutParams {
 }
 
 const NUM_COLS = 2;
+const HEADER_HEIGHT = 50;
+const FOOTER_HEIGHT = 45;
 
 export function layoutRecordPages(params: LayoutParams): PageLayout[] {
   const {
@@ -45,10 +52,9 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
   } = params;
 
   const contentWidthPx = Math.round(mmToPx(contentWidthMm));
-  const columnWidthPx = Math.round(
-    (contentWidthPx - COLUMN_GAP_PX * (NUM_COLS - 1)) / NUM_COLS,
+  const valueWidthPx = Math.round(
+    (contentWidthPx - LABEL_WIDTH * NUM_COLS) / NUM_COLS,
   );
-  const valueWidthPx = columnWidthPx - LABEL_WIDTH;
   const fullWidthValuePx = contentWidthPx - LABEL_WIDTH;
 
   const units: FieldUnit[] = fields.map((field) => {
@@ -61,66 +67,77 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
       formatted,
       level === 'single' ? valueWidthPx : fullWidthValuePx,
     );
-    return { field, value: formatted, level, height, column: -1 };
+    return { field, value: formatted, level, height };
   });
 
-  const pages: PageLayout[] = [];
-  let currentUnits: FieldUnit[] = [];
-  let currentColumns: FieldUnit[][] = Array.from({ length: NUM_COLS }, () => []);
+  const columns: FieldUnit[][] = Array.from({ length: NUM_COLS }, () => []);
+  const fullWidthUnits: FieldUnit[] = [];
   let columnCursors: number[] = new Array(NUM_COLS).fill(0);
-
-  const finalizePage = (): void => {
-    if (currentUnits.length > 0) {
-      pages.push({
-        units: [...currentUnits],
-        columns: currentColumns.map((col) => [...col]),
-        pageNumber: pages.length + 1,
-        isFirst: pages.length === 0,
-        isLast: false,
-      });
-    }
-    currentUnits = [];
-    currentColumns = Array.from({ length: NUM_COLS }, () => []);
-    columnCursors = new Array(NUM_COLS).fill(0);
-  };
 
   for (const unit of units) {
     if (unit.level === 'single') {
       const minCol = columnCursors.indexOf(Math.min(...columnCursors));
-      const bottom = columnCursors[minCol] + unit.height;
-
-      if (bottom > contentHeightPx && currentUnits.length > 0) {
-        finalizePage();
-      }
-
-      const col = columnCursors.indexOf(Math.min(...columnCursors));
-      unit.column = col;
-      currentUnits.push(unit);
-      currentColumns[col].push(unit);
-      columnCursors[col] += unit.height;
+      columns[minCol].push(unit);
+      columnCursors[minCol] += unit.height;
     } else {
-      const flatHeight = Math.max(...columnCursors);
-      const bottom = flatHeight + unit.height;
-
-      if (bottom > contentHeightPx && currentUnits.length > 0) {
-        finalizePage();
-      }
-
-      unit.column = -1;
-      currentUnits.push(unit);
+      fullWidthUnits.push(unit);
       const newCursor = Math.max(...columnCursors) + unit.height;
       columnCursors = new Array(NUM_COLS).fill(newCursor);
     }
   }
 
-  if (currentUnits.length > 0) {
-    finalizePage();
+  const maxRows = Math.max(...columns.map((c) => c.length));
+  const mergedRows: MergedRow[] = [];
+
+  for (let i = 0; i < maxRows; i++) {
+    const left = columns[0][i];
+    const right = columns[1][i];
+    const height = Math.max(left?.height ?? 0, right?.height ?? 0);
+    mergedRows.push({ type: 'paired', height, left, right });
+  }
+
+  for (const unit of fullWidthUnits) {
+    mergedRows.push({ type: 'full', height: unit.height, unit });
+  }
+
+  const pages: PageLayout[] = [];
+  let currentRows: MergedRow[] = [];
+  let accumulatedHeight = 0;
+  let isFirstPage = true;
+
+  for (const row of mergedRows) {
+    const availableHeight = isFirstPage
+      ? contentHeightPx - HEADER_HEIGHT - FOOTER_HEIGHT
+      : contentHeightPx - FOOTER_HEIGHT;
+
+    if (accumulatedHeight + row.height > availableHeight && currentRows.length > 0) {
+      pages.push({
+        rows: currentRows,
+        pageNumber: pages.length + 1,
+        isFirst: isFirstPage,
+        isLast: false,
+      });
+      currentRows = [];
+      accumulatedHeight = 0;
+      isFirstPage = false;
+    }
+
+    currentRows.push(row);
+    accumulatedHeight += row.height;
+  }
+
+  if (currentRows.length > 0) {
+    pages.push({
+      rows: currentRows,
+      pageNumber: pages.length + 1,
+      isFirst: isFirstPage,
+      isLast: false,
+    });
   }
 
   if (pages.length === 0) {
     pages.push({
-      units: [],
-      columns: Array.from({ length: NUM_COLS }, () => []),
+      rows: [],
       pageNumber: 1,
       isFirst: true,
       isLast: true,
