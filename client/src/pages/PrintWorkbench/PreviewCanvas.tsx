@@ -4,6 +4,10 @@ import { FONT_SIZES, mmToPx } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH, COLUMN_GAP_PX } from './field-utils';
 import { layoutRecordPages, type PageLayout, type FieldUnit } from './layout-engine';
 
+interface RecordPageLayout extends PageLayout {
+  recordIndex: number;
+}
+
 export interface PreviewCanvasHandle {
   getContent: () => string;
   getPageElements: () => HTMLElement[];
@@ -112,16 +116,29 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const contentWidthMm = pageWidth - margins.left - margins.right;
     const contentHeightPx = pageHeightPx - marginsPx.top - marginsPx.bottom;
 
-    const recordPages = useMemo<PageLayout[]>(() => {
+    const recordPages = useMemo<RecordPageLayout[]>(() => {
       if (mode !== 'record' || records.length === 0) return [];
-      return layoutRecordPages({
-        fields: enabledFields,
-        record: records[0],
-        fieldTypes,
-        contentWidthMm,
-        contentHeightPx,
-        fontSize: fs,
+      const allPages: RecordPageLayout[] = [];
+      for (let rIdx = 0; rIdx < records.length; rIdx++) {
+        const pages = layoutRecordPages({
+          fields: enabledFields,
+          record: records[rIdx],
+          fieldTypes,
+          contentWidthMm,
+          contentHeightPx,
+          fontSize: fs,
+        });
+        for (const p of pages) {
+          allPages.push({ ...p, recordIndex: rIdx });
+        }
+      }
+      const total = allPages.length;
+      allPages.forEach((p, i) => {
+        p.pageNumber = i + 1;
+        p.isFirst = i === 0 || allPages[i - 1].recordIndex !== p.recordIndex;
+        p.isLast = i === total - 1 || allPages[i + 1].recordIndex !== p.recordIndex;
       });
+      return allPages;
     }, [mode, records, enabledFields, fieldTypes, contentWidthMm, contentHeightPx, fs]);
 
     const viewPages = useMemo<ViewPageInfo[]>(() => {
@@ -148,12 +165,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         minWidth: LABEL_WIDTH,
         width: 'auto',
         flexShrink: 0,
-        background: 'hsl(33, 22%, 90%)',
-        border: '1px solid hsl(30, 8%, 88%)',
+        background: '#F7F8FA',
+        border: '1px solid #E5E6EB',
         borderRight: 'none',
         padding: '5px 8px',
         fontSize: 12,
-        color: 'hsl(0, 0%, 10%)',
+        color: '#1F2329',
         lineHeight: '22px',
         textAlign: 'left',
       };
@@ -162,10 +179,10 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         flex: 1,
         minWidth: 0,
         background: '#FFFFFF',
-        border: '1px solid hsl(30, 8%, 88%)',
+        border: '1px solid #E5E6EB',
         padding: '5px 8px',
         fontSize: 12,
-        color: 'hsl(0, 0%, 10%)',
+        color: '#1F2329',
         lineHeight: '22px',
         textAlign: 'left',
         wordBreak: 'break-word',
@@ -180,8 +197,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       );
     };
 
-    const renderRecordPage = (page: PageLayout, pageIdx: number) => {
-      const record = records[0];
+    const renderRecordPage = (page: RecordPageLayout, pageIdx: number) => {
+      const record = records[page.recordIndex];
       const title =
         formatFieldValue(record[titleField]) ||
         formatFieldValue(record['标题']) ||
@@ -194,7 +211,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       return (
         <div
           key={pageIdx}
-          className="print-page bg-card shadow-sm overflow-hidden"
+          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
             minHeight: pageHeightPx,
@@ -213,11 +230,11 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 fontSize: 14,
                 fontWeight: 700,
-                color: 'hsl(0, 0%, 10%)',
+                color: '#1F2329',
                 textAlign: 'left',
                 paddingBottom: 8,
                 marginBottom: 12,
-                borderBottom: '2px solid hsl(30, 8%, 88%)',
+                borderBottom: '2px solid #e5e5e5',
                 flexShrink: 0,
               }}
             >
@@ -242,12 +259,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 marginTop: 'auto',
                 paddingTop: 12,
-                borderTop: '1px solid hsl(30, 8%, 88%)',
+                borderTop: '1px solid #E5E6EB',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-end',
                 fontSize: 11,
-                color: 'hsl(25, 5%, 40%)',
+                color: '#86909C',
                 flexShrink: 0,
               }}
             >
@@ -264,11 +281,11 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 marginTop: 'auto',
                 paddingTop: 12,
-                borderTop: '1px solid hsl(30, 8%, 88%)',
+                borderTop: '1px solid #E5E6EB',
                 display: 'flex',
                 justifyContent: 'flex-end',
                 fontSize: 11,
-                color: 'hsl(25, 5%, 40%)',
+                color: '#86909C',
                 flexShrink: 0,
               }}
             >
