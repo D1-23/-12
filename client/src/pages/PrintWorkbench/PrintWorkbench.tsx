@@ -100,10 +100,12 @@ const PrintWorkbench = () => {
 
   useEffect(() => {
     if (!sdkAvailable || !selectedRecord || templates.length === 0) return;
-    if (view === 'list' && autoSwitchedIdRef.current !== selectedRecord.id) {
+    if (autoSwitchedIdRef.current !== selectedRecord.id) {
       autoSwitchedIdRef.current = selectedRecord.id;
-      setActiveTemplateId(templates[0].id);
-      setView('preview');
+      if (view === 'list') {
+        setActiveTemplateId(templates[0].id);
+        setView('preview');
+      }
     }
   }, [sdkAvailable, selectedRecord, view, templates]);
 
