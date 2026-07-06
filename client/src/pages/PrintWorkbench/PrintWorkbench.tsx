@@ -1,52 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FileText } from 'lucide-react';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import { logger } from '@lark-apaas/client-toolkit/logger';
-import { bitable } from '@/api';
 import type { PrintTemplate, TemplateType } from '@/types/template';
 import { loadTemplates, saveTemplates, migrateTemplate, DEFAULT_PAGE_MARGINS } from '@/types/template';
-import { useBitableSelection } from '@/hooks/useBitableSelection';
+import { useBitableData } from '@/hooks/useBitableData';
 import TemplateList from './TemplateList';
 import TemplatePreview from './TemplatePreview';
 import TemplateConfig from './TemplateConfig';
 
 type ViewMode = 'list' | 'preview' | 'config';
 
-interface RecordWithId {
-  id: string;
-  record: Record<string, unknown>;
+function extractFieldsFromRecords(
+  recs: Array<{ record: Record<string, unknown> }>
+): string[] {
+  const fieldSet = new Set<string>();
+  for (const { record } of recs) {
+    for (const key of Object.keys(record)) {
+      fieldSet.add(key);
+    }
+  }
+  return Array.from(fieldSet);
 }
-
-const SAMPLE_RECORDS: RecordWithId[] = [
-  {
-    id: 'sample_1',
-    record: {
-      '客户名称': { text: '张三科技有限公司' },
-      '拜访日期': 1719792000000,
-      '跟进要点': { text: '讨论了 Q3 大客户回访计划，客户对新方案表示认可，希望在下周安排一次技术评审会议。' },
-      '联系人': { text: '李经理' },
-      '联系电话': '13800138000',
-      '预算金额': 150000,
-      '状态': '进行中',
-      '下次拜访': 1720396800000,
-      '备注': { text: '需要准备详细的技术方案文档，包含系统架构和实施时间表。' },
-    },
-  },
-  {
-    id: 'sample_2',
-    record: {
-      '客户名称': { text: '李四网络科技公司' },
-      '拜访日期': 1719878400000,
-      '跟进要点': { text: '客户提出了新的需求，关于系统集成方面的要求。' },
-      '联系人': { text: '王总监' },
-      '联系电话': '13900139000',
-      '预算金额': 280000,
-      '状态': '待确认',
-      '下次拜访': 1720483200000,
-      '备注': { text: '需要与技术团队讨论可行性方案。' },
-    },
-  },
-];
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -94,65 +68,32 @@ const PrintWorkbench = () => {
   const [view, setView] = useState<ViewMode>('list');
   const [templates, setTemplates] = useState<PrintTemplate[]>([]);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
-  const [allFields, setAllFields] = useState<string[]>([]);
-  const [records, setRecords] = useState<RecordWithId[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { selectedRecord, available: sdkAvailable } = useBitableSelection();
+  const {
+    records,
+    allFields,
+    selectedRecord,
+    sdkAvailable,
+    loading,
+  } = useBitableData();
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        let loadedRecords: RecordWithId[];
-        if (bitable.isPluginConfigured()) {
-          const result = await bitable.searchRecords({ pageSize: 50 });
-          loadedRecords = result.records.map((r) => ({ id: r.id, record: r.record }));
-          if (loadedRecords.length === 0) loadedRecords = SAMPLE_RECORDS;
-        } else {
-          loadedRecords = SAMPLE_RECORDS;
+    const initTemplates = () => {
+      if (loading) return;
+      const fields = allFields.length > 0 ? allFields : extractFieldsFromRecords(records);
+      const stored = loadTemplates().map(migrateTemplate);
+      if (stored.length > 0) {
+        setTemplates(stored);
+        if (stored.some((t) => !t.paperSize)) {
+          saveTemplates(stored);
         }
-        setRecords(loadedRecords);
-
-        const fieldSet = new Set<string>();
-        for (const { record } of loadedRecords) {
-          for (const key of Object.keys(record)) {
-            fieldSet.add(key);
-          }
-        }
-        const fields = Array.from(fieldSet);
-        setAllFields(fields);
-
-        const stored = loadTemplates().map(migrateTemplate);
-        if (stored.length > 0) {
-          setTemplates(stored);
-          if (stored.some((t) => !t.paperSize)) {
-            saveTemplates(stored);
-          }
-        } else {
-          const defaults = createDefaultTemplates(fields);
-          setTemplates(defaults);
-          saveTemplates(defaults);
-        }
-      } catch (err) {
-        logger.error('加载数据失败', String(err));
-        const fallbackRecords = SAMPLE_RECORDS;
-        setRecords(fallbackRecords);
-        const fieldSet = new Set<string>();
-        for (const { record } of fallbackRecords) {
-          for (const key of Object.keys(record)) {
-            fieldSet.add(key);
-          }
-        }
-        const fields = Array.from(fieldSet);
-        setAllFields(fields);
+      } else {
         const defaults = createDefaultTemplates(fields);
         setTemplates(defaults);
         saveTemplates(defaults);
       }
-      setLoading(false);
     };
-    loadData();
-  }, []);
+    initTemplates();
+  }, [loading]);
 
   useEffect(() => {
     if (sdkAvailable && selectedRecord && view === 'list' && templates.length > 0) {
@@ -161,21 +102,6 @@ const PrintWorkbench = () => {
       setView('preview');
     }
   }, [sdkAvailable, selectedRecord, view, templates]);
-
-  useEffect(() => {
-    if (sdkAvailable && selectedRecord) {
-      const newFields = Object.keys(selectedRecord.record);
-      setAllFields((prev) => {
-        const prevSet = new Set(prev);
-        let changed = false;
-        for (const f of newFields) {
-          if (!prevSet.has(f)) { changed = true; break; }
-        }
-        if (!changed && prev.length === newFields.length) return prev;
-        return newFields;
-      });
-    }
-  }, [sdkAvailable, selectedRecord]);
 
   const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
 
