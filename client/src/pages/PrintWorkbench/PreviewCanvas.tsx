@@ -100,9 +100,8 @@ function calculateRecordPages(
 ): PageInfo[] {
   const fs = FONT_SIZES[fontSize];
   const contentHeight = pageHeightPx - marginsPx.top - marginsPx.bottom;
-  const titleBlockHeight = 36;
   const rowHeight = fs * 1.4 + 18;
-  const maxRowsPerPage = Math.max(1, Math.floor((contentHeight - titleBlockHeight) / rowHeight));
+  const maxRowsPerPage = Math.max(1, Math.floor(contentHeight / rowHeight));
 
   const pages: PageInfo[] = [];
   for (const record of records) {

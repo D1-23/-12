@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import type { PrintTemplate } from '@/types/template';
-import { TEMPLATE_TYPE_LABELS } from '@/types/template';
+import { TEMPLATE_TYPE_LABELS, mmToPx } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
 import RecordSelector from './RecordSelector';
 import FieldSettingsDialog from './FieldSettingsDialog';
@@ -74,6 +74,9 @@ const TemplatePreview = ({
     const content = previewRef.current?.getContent();
     if (!content) return;
 
+    const pageWidthPx = Math.round(mmToPx(template.pageWidth));
+    const pageHeightPx = Math.round(mmToPx(template.pageHeight));
+
     try {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import('html2canvas'),
@@ -82,14 +85,14 @@ const TemplatePreview = ({
 
       const iframe = document.createElement('iframe');
       iframe.style.cssText =
-        'position:fixed;left:-9999px;top:0;width:794px;height:5000px;border:none;visibility:hidden;';
+        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;height:5000px;border:none;visibility:hidden;`;
       document.body.appendChild(iframe);
 
       const iframeDoc = iframe.contentDocument!;
       iframeDoc.open();
       iframeDoc.write(`<!DOCTYPE html><html><head><style>
         *{box-sizing:border-box;margin:0;padding:0}
-        body{width:794px;background:#fff;font-family:system-ui,-apple-system,sans-serif}
+        body{width:${pageWidthPx}px;background:#fff;font-family:system-ui,-apple-system,sans-serif}
       </style></head><body>${content}</body></html>`);
       iframeDoc.close();
 
@@ -105,9 +108,11 @@ const TemplatePreview = ({
         iframeDoc.querySelectorAll('.print-page')
       ) as HTMLElement[];
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pdf = new jsPDF({
+        orientation: template.pageWidth > template.pageHeight ? 'l' : 'p',
+        unit: 'mm',
+        format: [template.pageWidth, template.pageHeight],
+      });
 
       for (let i = 0; i < pageElements.length; i++) {
         const el = pageElements[i];
@@ -116,17 +121,17 @@ const TemplatePreview = ({
           scale: 2,
           useCORS: true,
           logging: false,
-          width: 794,
-          height: 1123,
+          width: pageWidthPx,
+          height: pageHeightPx,
           backgroundColor: '#ffffff',
         });
 
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
         if (i > 0) {
-          pdf.addPage();
+          pdf.addPage([template.pageWidth, template.pageHeight], template.pageWidth > template.pageHeight ? 'l' : 'p');
         }
-        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
+        pdf.addImage(imgData, 'JPEG', 0, 0, template.pageWidth, template.pageHeight);
       }
 
       document.body.removeChild(iframe);
@@ -136,7 +141,7 @@ const TemplatePreview = ({
     } catch (err) {
       logger.error('PDF导出失败', String(err));
     }
-  }, [template.name]);
+  }, [template]);
 
   return (
     <div className="flex flex-col h-full">
