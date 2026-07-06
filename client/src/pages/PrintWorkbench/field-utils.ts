@@ -1,13 +1,10 @@
-import { mmToPx } from '@/types/template';
-
 export type FieldLevel = 'single' | 'full' | 'block';
 
-export const LABEL_WIDTH = 120;
+export const LABEL_WIDTH = 110;
 export const LINE_HEIGHT = 22;
-export const UNIT_MIN_HEIGHT = 30;
-export const UNIT_GAP = 8;
-export const COLUMN_GAP_MM = 8;
-export const MIN_COLUMN_WIDTH_MM = 60;
+export const UNIT_MIN_HEIGHT = 32;
+export const UNIT_GAP = 0;
+export const COLUMN_GAP_PX = 16;
 
 const FULL_WIDTH_TYPES = new Set<number>([
   4,
@@ -69,7 +66,7 @@ export function formatFieldValue(value: unknown, fieldType?: number): string {
 
   if (Array.isArray(value)) {
     return value
-      .map((item) => formatFieldValue(item))
+      .map((item: unknown) => formatFieldValue(item, fieldType))
       .filter(Boolean)
       .join(', ');
   }
@@ -80,7 +77,7 @@ export function formatFieldValue(value: unknown, fieldType?: number): string {
     }
     return String(value);
   }
-  if (typeof value === 'boolean') return value ? '是' : '否';
+  if (typeof value === 'boolean') return value ? '☑' : '☐';
 
   try {
     const str = String(value);
@@ -158,11 +155,7 @@ export function estimateUnitHeight(
     lineCount = Math.max(explicitLines, wrappedLines);
   }
 
-  return Math.max(baseHeight, lineCount * LINE_HEIGHT + 8);
-}
-
-export function getColumnGapPx(): number {
-  return Math.round(mmToPx(COLUMN_GAP_MM));
+  return Math.max(baseHeight, lineCount * LINE_HEIGHT + 12);
 }
 
 export function formatPrintTime(): string {

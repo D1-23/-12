@@ -1,7 +1,7 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
-import { formatFieldValue, formatPrintTime, getColumnGapPx, LABEL_WIDTH, LINE_HEIGHT, UNIT_GAP, UNIT_MIN_HEIGHT } from './field-utils';
+import { formatFieldValue, formatPrintTime, LABEL_WIDTH, COLUMN_GAP_PX } from './field-utils';
 import { layoutRecordPages, type PageLayout, type FieldUnit } from './layout-engine';
 
 export interface PreviewCanvasHandle {
@@ -131,76 +131,48 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     const totalPages = mode === 'record' ? recordPages.length : viewPages.length;
 
-    const renderFieldUnit = (unit: FieldUnit, fullWidth: boolean) => {
-      const unitStyle: React.CSSProperties = {
+    const renderFieldUnit = (unit: FieldUnit, isFirst: boolean) => {
+      const isFullWidth = unit.level !== 'single';
+
+      const rowStyle: React.CSSProperties = {
         display: 'flex',
-        minHeight: UNIT_MIN_HEIGHT,
-        padding: '4px 0',
-        borderBottom: '1px solid #f0f0f0',
+        width: '100%',
+        breakInside: 'avoid',
+        marginTop: isFirst ? 0 : -1,
+        columnSpan: isFullWidth ? 'all' : undefined,
       };
 
       const labelStyle: React.CSSProperties = {
         width: LABEL_WIDTH,
         flexShrink: 0,
-        color: '#646A73',
+        background: '#F7F8FA',
+        border: '1px solid #E5E6EB',
+        borderRight: 'none',
+        padding: '5px 8px',
         fontSize: 12,
-        lineHeight: `${LINE_HEIGHT}px`,
+        color: '#1F2329',
+        lineHeight: '22px',
         textAlign: 'left',
       };
 
       const valueStyle: React.CSSProperties = {
         flex: 1,
         minWidth: 0,
-        color: '#1F2329',
+        background: '#FFFFFF',
+        border: '1px solid #E5E6EB',
+        padding: '5px 8px',
         fontSize: 12,
-        lineHeight: `${LINE_HEIGHT}px`,
+        color: '#1F2329',
+        lineHeight: '22px',
         textAlign: 'left',
         wordBreak: 'break-word',
         overflowWrap: 'break-word',
       };
 
       return (
-        <div key={unit.field} style={unitStyle}>
+        <div key={unit.field} style={rowStyle}>
           <div style={labelStyle}>{unit.field}</div>
           <div style={valueStyle}>{unit.value}</div>
-        </div>
-      );
-    };
-
-    const renderSegment = (segment: PageLayout['segments'][number]) => {
-      if (segment.type === 'fullwidth' && segment.fullWidthUnit) {
-        return (
-          <div
-            key={`full-${segment.fullWidthUnit.field}`}
-            style={{
-              margin: `${UNIT_GAP}px 0`,
-            }}
-          >
-            {renderFieldUnit(segment.fullWidthUnit, true)}
-          </div>
-        );
-      }
-
-      const columnGapPx = getColumnGapPx();
-      return (
-        <div
-          key={`cols-${segment.columns.length}`}
-          style={{
-            display: 'flex',
-            gap: columnGapPx,
-          }}
-        >
-          {segment.columns.map((col, colIdx) => (
-            <div
-              key={colIdx}
-              style={{
-                flex: 1,
-                minWidth: 0,
-              }}
-            >
-              {col.map((unit) => renderFieldUnit(unit, false))}
-            </div>
-          ))}
         </div>
       );
     };
@@ -251,7 +223,14 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           )}
 
           <div style={{ flex: 1 }}>
-            {page.segments.map((segment, segIdx) => renderSegment(segment))}
+            <div
+              style={{
+                columns: 2,
+                columnGap: `${COLUMN_GAP_PX}px`,
+              }}
+            >
+              {page.units.map((unit, idx) => renderFieldUnit(unit, idx === 0))}
+            </div>
           </div>
 
           {page.isLast ? (
@@ -259,19 +238,19 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 marginTop: 'auto',
                 paddingTop: 12,
-                borderTop: '1px solid #e5e5e5',
+                borderTop: '1px solid #E5E6EB',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center',
+                alignItems: 'flex-end',
                 fontSize: 11,
                 color: '#86909C',
                 flexShrink: 0,
               }}
             >
-              <span>
-                {tableName ? `Table Name: ${tableName}  ` : ''}
-                Print Time: {printTime}
-              </span>
+              <div>
+                {tableName && <div>Table Name: {tableName}</div>}
+                <div>Print Time: {printTime}</div>
+              </div>
               <span>
                 第 {pageIdx + 1} / {totalPages} 页
               </span>
@@ -281,7 +260,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 marginTop: 'auto',
                 paddingTop: 12,
-                borderTop: '1px solid #e5e5e5',
+                borderTop: '1px solid #E5E6EB',
                 display: 'flex',
                 justifyContent: 'flex-end',
                 fontSize: 11,
@@ -344,7 +323,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
                       title={formatFieldValue(item.record[field])}
                     >
                       {truncateText(
-                        formatFieldValue(item.record[field]) || '-',
+                        formatFieldValue(item.record[field]),
                         Math.max(maxCellChars, 8),
                       )}
                     </td>
