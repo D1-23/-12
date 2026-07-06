@@ -7,9 +7,8 @@ import { useBitableData } from '@/hooks/useBitableData';
 import TemplateList from './TemplateList';
 import TemplatePreview from './TemplatePreview';
 import TemplateConfig from './TemplateConfig';
-import TableEditor from './TableEditor';
 
-type ViewMode = 'list' | 'preview' | 'config' | 'editor';
+type ViewMode = 'list' | 'preview' | 'config';
 
 function extractFieldsFromRecords(
   recs: Array<{ record: Record<string, unknown> }>
@@ -228,20 +227,6 @@ const PrintWorkbench = () => {
     );
   }
 
-  if (view === 'editor' && activeTemplate) {
-    const defaultRecords = sdkAvailable && selectedRecord
-      ? [selectedRecord]
-      : allRecords;
-    return (
-      <TableEditor
-        template={activeTemplate}
-        recordsWithIds={defaultRecords}
-        onSave={handleSaveTemplate}
-        onBack={() => setView('preview')}
-      />
-    );
-  }
-
   if (view === 'preview' && activeTemplate) {
     const defaultRecords = sdkAvailable && selectedRecord
       ? [selectedRecord]
@@ -250,10 +235,12 @@ const PrintWorkbench = () => {
       <TemplatePreview
         template={activeTemplate}
         recordsWithIds={defaultRecords}
+        allRecords={allRecords}
         allFields={allFields}
+        recordsLoading={recordsLoading}
+        onLoadAllRecords={loadAllRecords}
         onBack={() => setView('list')}
         onEdit={() => setView('config')}
-        onEditTable={() => setView('editor')}
         onUpdateFields={(fields) => handleUpdateFields(activeTemplate.id, fields)}
       />
     );

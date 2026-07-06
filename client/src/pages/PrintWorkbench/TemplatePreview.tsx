@@ -1,12 +1,12 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal, Table, X } from 'lucide-react';
-import { selectRecordsFromBitable } from '@/api/bitable';
+import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import type { PrintTemplate } from '@/types/template';
 import { TEMPLATE_TYPE_LABELS, mmToPx } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
+import RecordSelector from './RecordSelector';
 import FieldSettingsDialog from './FieldSettingsDialog';
 
 interface RecordWithId {
@@ -17,57 +17,78 @@ interface RecordWithId {
 interface TemplatePreviewProps {
   template: PrintTemplate;
   recordsWithIds: RecordWithId[];
+  allRecords: RecordWithId[];
   allFields: string[];
+  recordsLoading: boolean;
+  onLoadAllRecords: () => void;
   onBack: () => void;
   onEdit: () => void;
-  onEditTable?: () => void;
   onUpdateFields?: (fields: string[]) => void;
 }
 
 const TemplatePreview = ({
   template,
   recordsWithIds,
+  allRecords,
   allFields,
+  recordsLoading,
+  onLoadAllRecords,
   onBack,
   onEdit,
-  onEditTable,
   onUpdateFields,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
   const [batchMode, setBatchMode] = useState(false);
-  const [batchRecords, setBatchRecords] = useState<RecordWithId[]>([]);
+  const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(new Set());
+  const [showSelector, setShowSelector] = useState(false);
   const [showFieldDialog, setShowFieldDialog] = useState(false);
-  const [selecting, setSelecting] = useState(false);
 
   const displayRecords = useMemo(() => {
     if (batchMode) {
-      return batchRecords.map((r) => r.record);
+      return allRecords
+        .filter((r) => batchSelectedIds.has(r.id))
+        .map((r) => r.record);
     }
     return recordsWithIds.map((r) => r.record);
-  }, [batchMode, batchRecords, recordsWithIds]);
+  }, [batchMode, batchSelectedIds, allRecords, recordsWithIds]);
 
   const displayCount = displayRecords.length;
+  const totalBatchCount = allRecords.length > 0 ? allRecords.length : recordsWithIds.length;
 
-  const handleBatchSelect = useCallback(async () => {
-    setSelecting(true);
-    try {
-      const selected = await selectRecordsFromBitable();
-      if (selected.length > 0) {
-        setBatchRecords(selected);
-        setBatchMode(true);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logger.error(`批量选择失败: ${msg}`);
-    } finally {
-      setSelecting(false);
+  const handleBatchToggle = useCallback((id: string) => {
+    setBatchSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleBatchSelectAll = useCallback(() => {
+    const source = allRecords.length > 0 ? allRecords : recordsWithIds;
+    setBatchSelectedIds(new Set(source.map((r) => r.id)));
+  }, [allRecords, recordsWithIds]);
+
+  const handleBatchDeselectAll = useCallback(() => {
+    setBatchSelectedIds(new Set());
+  }, []);
+
+  const handleOpenSelector = useCallback(() => {
+    setShowSelector(true);
+    onLoadAllRecords();
+    if (!batchMode) {
+      setBatchMode(true);
+      const ids = allRecords.length > 0 ? allRecords : recordsWithIds;
+      setBatchSelectedIds(new Set(ids.map((r) => r.id)));
     }
-  }, []);
+  }, [onLoadAllRecords, batchMode, allRecords, recordsWithIds]);
 
-  const handleExitBatch = useCallback(() => {
-    setBatchMode(false);
-    setBatchRecords([]);
-  }, []);
+  const handleCloseSelector = useCallback(() => {
+    setShowSelector(false);
+    if (batchSelectedIds.size === 0) {
+      setBatchMode(false);
+    }
+  }, [batchSelectedIds.size]);
 
   const handlePrint = useCallback(() => {
     const content = previewRef.current?.getContent();
@@ -152,6 +173,8 @@ const TemplatePreview = ({
     }
   }, [template]);
 
+  const selectorSource = allRecords.length > 0 ? allRecords : recordsWithIds;
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card shrink-0">
@@ -179,15 +202,6 @@ const TemplatePreview = ({
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
-          onClick={onEditTable}
-        >
-          <Table className="size-3.5" />
-          表格
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs gap-1"
           onClick={onEdit}
         >
           <Settings className="size-3.5" />
@@ -207,8 +221,19 @@ const TemplatePreview = ({
           pageWidth={template.pageWidth}
           pageHeight={template.pageHeight}
           margins={template.margins}
-          tableLayout={template.tableLayout}
         />
+        {showSelector && (
+          <RecordSelector
+            recordsWithIds={selectorSource}
+            selectedIds={batchSelectedIds}
+            onToggle={handleBatchToggle}
+            onSelectAll={handleBatchSelectAll}
+            onDeselectAll={handleBatchDeselectAll}
+            titleField={template.titleField}
+            onClose={handleCloseSelector}
+            loading={recordsLoading}
+          />
+        )}
       </div>
 
       {displayCount === 0 && (
@@ -224,29 +249,17 @@ const TemplatePreview = ({
       <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card shrink-0">
         <span className="text-[11px] text-muted-foreground truncate flex-1">
           {template.fields.length} 个字段 · {batchMode
-            ? `${batchRecords.length} 条记录`
+            ? `${batchSelectedIds.size}/${totalBatchCount} 条记录`
             : `${recordsWithIds.length > 0 ? 1 : 0} 条记录`}
         </span>
-        {batchMode && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs gap-1 text-muted-foreground"
-            onClick={handleExitBatch}
-          >
-            <X className="size-3.5" />
-            退出批量
-          </Button>
-        )}
         <Button
           variant="outline"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
-          onClick={handleBatchSelect}
-          disabled={selecting}
+          onClick={handleOpenSelector}
         >
           <CheckSquare className="size-3.5" />
-          {selecting ? '选择中...' : batchMode ? '重新选择' : '批量选择'}
+          {batchMode ? '已选' : '选择'}
         </Button>
         <Button
           variant="outline"
