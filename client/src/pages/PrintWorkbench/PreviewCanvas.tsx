@@ -4,6 +4,7 @@ import { MARGIN_VALUES, FONT_SIZES } from '@/types/template';
 
 export interface PreviewCanvasHandle {
   getContent: () => string;
+  getPageElements: () => HTMLElement[];
 }
 
 interface PreviewCanvasProps {
@@ -137,6 +138,11 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     useImperativeHandle(ref, () => ({
       getContent: () => contentRef.current?.innerHTML ?? '',
+      getPageElements: () => {
+        const container = contentRef.current;
+        if (!container) return [];
+        return Array.from(container.querySelectorAll('.print-page'));
+      },
     }));
 
     const pages = useMemo(
