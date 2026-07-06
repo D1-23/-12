@@ -1,6 +1,15 @@
 export type TemplateType = 'record' | 'view';
 export type MarginOption = 'narrow' | 'standard' | 'wide';
 export type FontSizeOption = 'small' | 'medium' | 'large';
+export type PaperSize = 'A4' | 'A3' | 'A5' | 'Letter' | 'Custom';
+export type Orientation = 'portrait' | 'landscape';
+
+export interface PageMargins {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
 
 export interface PrintTemplate {
   id: string;
@@ -12,6 +21,11 @@ export interface PrintTemplate {
   titleField: string;
   pinned: boolean;
   createdAt: number;
+  paperSize: PaperSize;
+  orientation: Orientation;
+  pageWidth: number;
+  pageHeight: number;
+  margins: PageMargins;
 }
 
 export const MARGIN_LABELS: Record<MarginOption, string> = {
@@ -42,6 +56,55 @@ export const FONT_SIZES: Record<FontSizeOption, number> = {
   medium: 14,
   large: 16,
 };
+
+export const PAPER_SIZE_LABELS: Record<PaperSize, string> = {
+  A4: 'A4',
+  A3: 'A3',
+  A5: 'A5',
+  Letter: 'Letter',
+  Custom: '自定义',
+};
+
+export const ORIENTATION_LABELS: Record<Orientation, string> = {
+  portrait: '纵向',
+  landscape: '横向',
+};
+
+export const PAPER_SIZES: Record<Exclude<PaperSize, 'Custom'>, { width: number; height: number }> = {
+  A4: { width: 210, height: 297 },
+  A3: { width: 297, height: 420 },
+  A5: { width: 148, height: 210 },
+  Letter: { width: 216, height: 279 },
+};
+
+export const DEFAULT_PAGE_MARGINS: PageMargins = {
+  top: 25,
+  right: 25,
+  bottom: 25,
+  left: 25,
+};
+
+export function mmToPx(mm: number): number {
+  return mm * 3.779527559;
+}
+
+export function migrateTemplate(t: PrintTemplate): PrintTemplate {
+  if (t.paperSize && t.margins) return t;
+  const marginVal = MARGIN_VALUES[t.margin] || 25;
+  return {
+    ...t,
+    paperSize: 'A4',
+    orientation: 'portrait',
+    pageWidth: 210,
+    pageHeight: 297,
+    margins: {
+      top: marginVal,
+      right: marginVal,
+      bottom: marginVal,
+      left: marginVal,
+    },
+  };
+}
 
 const STORAGE_KEY = 'docugenius_templates';
 const ACTIVE_KEY = 'docugenius_active_template_id';
