@@ -62,10 +62,7 @@
     break-inside: avoid-page !important;
     page-break-inside: avoid !important;
   }
-  #print-area table {
-    break-inside: avoid-page !important;
-    page-break-inside: avoid !important;
-  }
+
   #print-area .page-break-line {
     display: none !important;
   }
