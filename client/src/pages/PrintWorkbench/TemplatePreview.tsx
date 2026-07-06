@@ -71,8 +71,8 @@ const TemplatePreview = ({
   }, []);
 
   const handleExportPdf = useCallback(async () => {
-    const content = previewRef.current?.getContent();
-    if (!content) return;
+    const pageElements = previewRef.current?.getPageElements();
+    if (!pageElements || pageElements.length === 0) return;
 
     try {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -80,54 +80,40 @@ const TemplatePreview = ({
         import('jspdf'),
       ]);
 
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText =
-        'position:fixed;left:-9999px;top:0;width:794px;height:5000px;border:none;visibility:hidden;';
-      document.body.appendChild(iframe);
-
-      const iframeDoc = iframe.contentDocument!;
-      iframeDoc.open();
-      iframeDoc.write(`<!DOCTYPE html><html><head><style>
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{width:794px;background:#fff;font-family:system-ui,-apple-system,sans-serif}
-      </style></head><body>${content}</body></html>`);
-      iframeDoc.close();
-
-      await new Promise<void>((resolve) => {
-        const check = () => {
-          if (iframeDoc.readyState === 'complete') resolve();
-          else setTimeout(check, 50);
-        };
-        check();
-      });
-
-      const canvas = await html2canvas(iframeDoc.body, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-
-      document.body.removeChild(iframe);
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
 
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      for (let i = 0; i < pageElements.length; i++) {
+        const el = pageElements[i];
+        const clone = el.cloneNode(true) as HTMLElement;
+        clone.style.width = '794px';
+        clone.style.minHeight = '1123px';
+        clone.style.margin = '0';
+        clone.style.transform = 'none';
 
-      let heightLeft = imgHeight;
-      let position = 0;
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText =
+          'position:fixed;left:-9999px;top:0;width:794px;background:#fff;';
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
 
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+        const canvas = await html2canvas(clone, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: 794,
+          height: 1123,
+        });
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        document.body.removeChild(wrapper);
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
       }
 
       const dateStr = new Date().toISOString().slice(0, 10);
