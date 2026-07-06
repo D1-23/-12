@@ -96,10 +96,8 @@ function calculateRecordPages(
   const marginPx = MARGIN_VALUES[margin];
   const fs = FONT_SIZES[fontSize];
   const contentHeight = A4_HEIGHT - marginPx * 2;
-  const titleBlockHeight = 50;
-  const rowPadding = 20;
-  const rowBorder = 2;
-  const rowHeight = fs * 1.6 + rowPadding + rowBorder;
+  const titleBlockHeight = 36;
+  const rowHeight = fs * 1.4 + 18;
   const maxRowsPerPage = Math.max(1, Math.floor((contentHeight - titleBlockHeight) / rowHeight));
 
   const pages: PageInfo[] = [];
@@ -192,7 +190,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
       const cellStyle: React.CSSProperties = {
         border: '1px solid #d1d5db',
-        padding: '8px 12px',
+        padding: '5px 10px',
         verticalAlign: 'top',
       };
       const labelStyle: React.CSSProperties = {
@@ -227,7 +225,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           }}
         >
           <div
-            className="font-semibold mb-4 pb-2 border-b-2 border-foreground/20 text-foreground"
+            className="font-semibold mb-3 pb-1.5 border-b-2 border-foreground/20 text-foreground"
             style={{ fontSize: fs + 2 }}
           >
             {title}
