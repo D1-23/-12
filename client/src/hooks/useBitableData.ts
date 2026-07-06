@@ -20,6 +20,14 @@ interface UseBitableDataResult {
   selectedRecords: BitableRecord[];
 }
 
+const MAX_INIT_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
+const POLL_INTERVAL_MS = 2000;
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function useBitableData(): UseBitableDataResult {
   const [allFields, setAllFields] = useState<string[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<BitableRecord | null>(null);
@@ -32,6 +40,7 @@ export function useBitableData(): UseBitableDataResult {
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const allRecordsLoadedRef = useRef(false);
   const prevSelectionKeyRef = useRef<string>('');
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchSelectedRecord = useCallback(async (recordId: string) => {
     try {
@@ -68,26 +77,17 @@ export function useBitableData(): UseBitableDataResult {
 
   const fetchSelectedRecords = useCallback(async () => {
     try {
-      logger.info('fetchSelectedRecords: 开始获取选中记录');
       const selectedIds = await getSelectedRecordIds();
-      logger.info(`fetchSelectedRecords: 获取到 ${selectedIds.length} 个 ID`);
-
-      const selectionKey = selectedIds.sort().join(',');
-      if (selectionKey === prevSelectionKeyRef.current) {
-        logger.info('fetchSelectedRecords: 选择未变化，跳过更新');
-        return;
-      }
+      const selectionKey = selectedIds.slice().sort().join(',');
+      if (selectionKey === prevSelectionKeyRef.current) return;
       prevSelectionKeyRef.current = selectionKey;
 
       if (selectedIds.length === 0) {
-        logger.info('fetchSelectedRecords: 无选中记录，清空状态');
         setSelectedRecords([]);
         return;
       }
 
-      logger.info(`fetchSelectedRecords: 开始获取 ${selectedIds.length} 条记录详情`);
       const records = await getRecordsByIds(selectedIds, fieldMapRef.current);
-      logger.info(`fetchSelectedRecords: 成功获取 ${records.length} 条记录`);
       setSelectedRecords(records);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -98,9 +98,9 @@ export function useBitableData(): UseBitableDataResult {
   useEffect(() => {
     let cancelled = false;
 
-    const init = async () => {
-      setLoading(true);
+    const initWithRetry = async (attempt: number) => {
       try {
+        logger.info(`Bitable 初始化第 ${attempt} 次尝试`);
         const metaList = await getFieldMetaList();
         if (cancelled) return;
 
@@ -111,6 +111,7 @@ export function useBitableData(): UseBitableDataResult {
         fieldMapRef.current = map;
         setAllFields(metaList.map((m) => m.name));
         setSdkAvailable(true);
+        logger.info('Bitable 字段元数据加载成功');
 
         const { bitable: sdk } = await import('@lark-base-open/js-sdk');
         const selection = await sdk.base.getSelection();
@@ -119,7 +120,6 @@ export function useBitableData(): UseBitableDataResult {
         if (selection?.recordId) {
           await fetchSelectedRecord(selection.recordId);
         }
-
         await fetchSelectedRecords();
 
         const unsub = sdk.base.onSelectionChange(async (e) => {
@@ -136,22 +136,43 @@ export function useBitableData(): UseBitableDataResult {
           return;
         }
         unsubscribeRef.current = unsub;
+        logger.info('Bitable 选择监听器注册成功');
+
+        pollTimerRef.current = setInterval(async () => {
+          if (cancelled) return;
+          await fetchSelectedRecords();
+        }, POLL_INTERVAL_MS);
+        logger.info('Bitable 轮询兜底已启动');
       } catch (err: unknown) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
-        logger.warn(`Bitable 初始化失败: ${msg}`);
-        setSdkAvailable(false);
+        logger.warn(`Bitable 初始化第 ${attempt} 次失败: ${msg}`);
+
+        if (attempt < MAX_INIT_RETRIES) {
+          logger.info(`将在 ${RETRY_DELAY_MS}ms 后重试...`);
+          await sleep(RETRY_DELAY_MS);
+          if (!cancelled) {
+            await initWithRetry(attempt + 1);
+          }
+        } else {
+          logger.error('Bitable 初始化已达到最大重试次数，放弃');
+          setSdkAvailable(false);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    init();
+    initWithRetry(1);
 
     return () => {
       cancelled = true;
       unsubscribeRef.current?.();
       unsubscribeRef.current = null;
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
     };
   }, [fetchSelectedRecord, fetchSelectedRecords]);
 

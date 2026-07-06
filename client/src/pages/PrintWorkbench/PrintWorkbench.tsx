@@ -96,6 +96,8 @@ const PrintWorkbench = () => {
     initTemplates();
   }, [loading]);
 
+  const autoSwitchedIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!sdkAvailable || !selectedRecord || templates.length === 0) return;
     if (view === 'list' && autoSwitchedIdRef.current !== selectedRecord.id) {
@@ -104,8 +106,6 @@ const PrintWorkbench = () => {
       setView('preview');
     }
   }, [sdkAvailable, selectedRecord, view, templates]);
-
-  const autoSwitchedIdRef = useRef<string | null>(null);
 
   const activeTemplate = templates.find((t) => t.id === activeTemplateId) ?? null;
 
