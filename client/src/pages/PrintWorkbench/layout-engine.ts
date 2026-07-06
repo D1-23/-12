@@ -2,9 +2,8 @@ import {
   formatFieldValue,
   getFieldLevel,
   estimateUnitHeight,
-  getColumnGapPx,
   LABEL_WIDTH,
-  UNIT_GAP,
+  COLUMN_GAP_PX,
   type FieldLevel,
 } from './field-utils';
 import { mmToPx } from '@/types/template';
@@ -16,14 +15,8 @@ export interface FieldUnit {
   height: number;
 }
 
-export interface LayoutSegment {
-  type: 'columns' | 'fullwidth';
-  columns: FieldUnit[][];
-  fullWidthUnit: FieldUnit | null;
-}
-
 export interface PageLayout {
-  segments: LayoutSegment[];
+  units: FieldUnit[];
   pageNumber: number;
   isFirst: boolean;
   isLast: boolean;
@@ -38,28 +31,7 @@ export interface LayoutParams {
   fontSize: number;
 }
 
-export function calculateColumns(
-  fieldCount: number,
-  contentWidthMm: number,
-): number {
-  let columns: number;
-  if (fieldCount < 20) {
-    columns = 2;
-  } else if (fieldCount < 40) {
-    columns = 3;
-  } else {
-    columns = 4;
-  }
-
-  while (columns > 1) {
-    const gapMm = 8 * (columns - 1);
-    const colWidth = (contentWidthMm - gapMm) / columns;
-    if (colWidth >= 60) break;
-    columns--;
-  }
-
-  return columns;
-}
+const NUM_COLS = 2;
 
 export function layoutRecordPages(params: LayoutParams): PageLayout[] {
   const {
@@ -70,11 +42,9 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
     contentHeightPx,
   } = params;
 
-  const numCols = calculateColumns(fields.length, contentWidthMm);
   const contentWidthPx = Math.round(mmToPx(contentWidthMm));
-  const columnGapPx = getColumnGapPx();
   const columnWidthPx = Math.round(
-    (contentWidthPx - columnGapPx * (numCols - 1)) / numCols,
+    (contentWidthPx - COLUMN_GAP_PX * (NUM_COLS - 1)) / NUM_COLS,
   );
   const valueWidthPx = columnWidthPx - LABEL_WIDTH;
   const fullWidthValuePx = contentWidthPx - LABEL_WIDTH;
@@ -93,103 +63,55 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
   });
 
   const pages: PageLayout[] = [];
-  let currentSegments: LayoutSegment[] = [];
-  let columnCursors: number[] = new Array(numCols).fill(0);
-  let pageUnitCount = 0;
-  let currentSegment: LayoutSegment | null = null;
-
-  const startNewColumnsSegment = (): LayoutSegment => {
-    const seg: LayoutSegment = {
-      type: 'columns',
-      columns: Array.from({ length: numCols }, () => []),
-      fullWidthUnit: null,
-    };
-    currentSegments.push(seg);
-    return seg;
-  };
+  let currentUnits: FieldUnit[] = [];
+  let columnCursors: number[] = new Array(NUM_COLS).fill(0);
 
   const finalizePage = (): void => {
-    if (currentSegments.length > 0) {
+    if (currentUnits.length > 0) {
       pages.push({
-        segments: [...currentSegments],
+        units: [...currentUnits],
         pageNumber: pages.length + 1,
         isFirst: pages.length === 0,
         isLast: false,
       });
     }
-    currentSegments = [];
-    columnCursors = new Array(numCols).fill(0);
-    pageUnitCount = 0;
-    currentSegment = null;
+    currentUnits = [];
+    columnCursors = new Array(NUM_COLS).fill(0);
   };
 
   for (const unit of units) {
     if (unit.level === 'single') {
       const minCol = columnCursors.indexOf(Math.min(...columnCursors));
-      const cursorPos = columnCursors[minCol];
-      const bottom = cursorPos + unit.height;
+      const bottom = columnCursors[minCol] + unit.height;
 
-      if (bottom > contentHeightPx && pageUnitCount > 0) {
-        if (pageUnitCount === 1) {
-          const removed = currentSegments.pop();
-          if (removed && removed.type === 'columns') {
-            for (const col of removed.columns) {
-              for (const u of col) {
-                columnCursors = new Array(numCols).fill(0);
-              }
-            }
-          }
-          columnCursors = new Array(numCols).fill(0);
-          pageUnitCount = 0;
-          currentSegment = null;
-        } else {
-          finalizePage();
-        }
+      if (bottom > contentHeightPx && currentUnits.length > 0) {
+        finalizePage();
       }
 
-      if (!currentSegment || currentSegment.type !== 'columns') {
-        currentSegment = startNewColumnsSegment();
-      }
-
-      currentSegment.columns[minCol].push(unit);
-      columnCursors[minCol] += unit.height + UNIT_GAP;
-      pageUnitCount++;
+      currentUnits.push(unit);
+      const col = columnCursors.indexOf(Math.min(...columnCursors));
+      columnCursors[col] += unit.height;
     } else {
-      const fullHeight = unit.height + UNIT_GAP * 2;
       const flatHeight = Math.max(...columnCursors);
-      const bottom = flatHeight + fullHeight;
+      const bottom = flatHeight + unit.height;
 
-      if (bottom > contentHeightPx && pageUnitCount > 0) {
-        if (pageUnitCount === 1) {
-          currentSegments = [];
-          columnCursors = new Array(numCols).fill(0);
-          pageUnitCount = 0;
-          currentSegment = null;
-        } else {
-          finalizePage();
-        }
+      if (bottom > contentHeightPx && currentUnits.length > 0) {
+        finalizePage();
       }
 
-      const fullSegment: LayoutSegment = {
-        type: 'fullwidth',
-        columns: [],
-        fullWidthUnit: unit,
-      };
-      currentSegments.push(fullSegment);
-      const newCursor = (Math.max(...columnCursors)) + fullHeight;
-      columnCursors = new Array(numCols).fill(newCursor);
-      pageUnitCount++;
-      currentSegment = null;
+      currentUnits.push(unit);
+      const newCursor = Math.max(...columnCursors) + unit.height;
+      columnCursors = new Array(NUM_COLS).fill(newCursor);
     }
   }
 
-  if (currentSegments.length > 0) {
+  if (currentUnits.length > 0) {
     finalizePage();
   }
 
   if (pages.length === 0) {
     pages.push({
-      segments: [],
+      units: [],
       pageNumber: 1,
       isFirst: true,
       isLast: true,
