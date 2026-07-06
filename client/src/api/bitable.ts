@@ -100,13 +100,29 @@ export async function getAllRecords(
 
 export async function getSelectedRecordIds(): Promise<string[]> {
   const sdk = await getSDK();
-  if (!sdk) return [];
-  const table = await sdk.base.getActiveTable();
-  const view = await table.getActiveView();
-  const gridView = view as unknown as { getSelectedRecordIdList?: () => Promise<string[]> };
-  if (!gridView.getSelectedRecordIdList) return [];
-  const ids = await gridView.getSelectedRecordIdList();
-  return ids ?? [];
+  if (!sdk) {
+    logger.warn('getSelectedRecordIds: SDK 不可用');
+    return [];
+  }
+  try {
+    const table = await sdk.base.getActiveTable();
+    const view = await table.getActiveView();
+    const viewType = await view.getType();
+    logger.info(`getSelectedRecordIds: 当前视图类型=${viewType}`);
+
+    const gridView = view as unknown as { getSelectedRecordIdList?: () => Promise<string[]> };
+    if (!gridView.getSelectedRecordIdList) {
+      logger.warn('getSelectedRecordIds: 当前视图不支持 getSelectedRecordIdList');
+      return [];
+    }
+    const ids = await gridView.getSelectedRecordIdList();
+    logger.info(`getSelectedRecordIds: 获取到 ${ids?.length ?? 0} 条选中记录`);
+    return ids ?? [];
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`getSelectedRecordIds: 获取失败 - ${msg}`);
+    return [];
+  }
 }
 
 export async function getRecordsByIds(
