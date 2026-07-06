@@ -13,10 +13,12 @@ export interface FieldUnit {
   value: string;
   level: FieldLevel;
   height: number;
+  column: number;
 }
 
 export interface PageLayout {
   units: FieldUnit[];
+  columns: FieldUnit[][];
   pageNumber: number;
   isFirst: boolean;
   isLast: boolean;
@@ -59,23 +61,26 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
       formatted,
       level === 'single' ? valueWidthPx : fullWidthValuePx,
     );
-    return { field, value: formatted, level, height };
+    return { field, value: formatted, level, height, column: -1 };
   });
 
   const pages: PageLayout[] = [];
   let currentUnits: FieldUnit[] = [];
+  let currentColumns: FieldUnit[][] = Array.from({ length: NUM_COLS }, () => []);
   let columnCursors: number[] = new Array(NUM_COLS).fill(0);
 
   const finalizePage = (): void => {
     if (currentUnits.length > 0) {
       pages.push({
         units: [...currentUnits],
+        columns: currentColumns.map((col) => [...col]),
         pageNumber: pages.length + 1,
         isFirst: pages.length === 0,
         isLast: false,
       });
     }
     currentUnits = [];
+    currentColumns = Array.from({ length: NUM_COLS }, () => []);
     columnCursors = new Array(NUM_COLS).fill(0);
   };
 
@@ -88,8 +93,10 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
         finalizePage();
       }
 
-      currentUnits.push(unit);
       const col = columnCursors.indexOf(Math.min(...columnCursors));
+      unit.column = col;
+      currentUnits.push(unit);
+      currentColumns[col].push(unit);
       columnCursors[col] += unit.height;
     } else {
       const flatHeight = Math.max(...columnCursors);
@@ -99,6 +106,7 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
         finalizePage();
       }
 
+      unit.column = -1;
       currentUnits.push(unit);
       const newCursor = Math.max(...columnCursors) + unit.height;
       columnCursors = new Array(NUM_COLS).fill(newCursor);
@@ -112,6 +120,7 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
   if (pages.length === 0) {
     pages.push({
       units: [],
+      columns: Array.from({ length: NUM_COLS }, () => []),
       pageNumber: 1,
       isFirst: true,
       isLast: true,
