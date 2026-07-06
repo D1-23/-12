@@ -1,6 +1,8 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
-import { MARGIN_VALUES, FONT_SIZES, mmToPx } from '@/types/template';
+import { FONT_SIZES, mmToPx } from '@/types/template';
+import { formatFieldValue, getColumnGapPx, LABEL_WIDTH, LINE_HEIGHT, UNIT_GAP, UNIT_MIN_HEIGHT } from './field-utils';
+import { layoutRecordPages, type PageLayout, type FieldUnit } from './layout-engine';
 
 export interface PreviewCanvasHandle {
   getContent: () => string;
@@ -17,68 +19,8 @@ interface PreviewCanvasProps {
   pageWidth: number;
   pageHeight: number;
   margins: PageMargins;
-}
-
-const A4_WIDTH = 794;
-const A4_HEIGHT = 1123;
-const TITLE_HEIGHT = 36;
-const FIELD_ROW_BASE = 28;
-const FIELD_ROW_LINE = 18;
-
-function formatFieldValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-
-  // 多维表格标准字段结构 { bizType: 'Text', value: [...] }
-  if (typeof value === 'object' && value !== null && 'bizType' in value && 'value' in value) {
-    const typed = value as { bizType: string; value: unknown };
-    return formatFieldValue(typed.value);
-  }
-
-  // 纯文本对象 { text: 'xxx' }
-  if (typeof value === 'object' && value !== null && 'text' in value) {
-    return String((value as { text: unknown }).text ?? '');
-  }
-
-  // 单选 { id: string, text: string }
-  if (typeof value === 'object' && value !== null && 'id' in value && 'text' in value) {
-    return String((value as { text: unknown }).text ?? '');
-  }
-
-  // 用户/人员 { id: string, name: string, ... }
-  if (typeof value === 'object' && value !== null && 'name' in value) {
-    return String((value as { name: unknown }).name ?? '');
-  }
-
-  // 链接 { text: string, recordIds: string[], tableId: string }
-  if (typeof value === 'object' && value !== null && 'recordIds' in value) {
-    const link = value as { text?: unknown; recordIds?: string[] };
-    if (link.recordIds && link.recordIds.length > 0) {
-      return link.recordIds.join(', ');
-    }
-    return String(link.text ?? '');
-  }
-
-  // 数组处理（多选、多行文本段落等）
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => formatFieldValue(item))
-      .filter(Boolean)
-      .join(', ');
-  }
-
-  if (typeof value === 'number') return String(value);
-  if (typeof value === 'boolean') return value ? '是' : '否';
-
-  // 最后兜底转字符串
-  try {
-    const str = String(value);
-    if (str === '[object Object]') {
-      return JSON.stringify(value);
-    }
-    return str;
-  } catch {
-    return '';
-  }
+  fieldTypes: Record<string, number>;
+  tableName: string;
 }
 
 function truncateText(text: string, maxLen: number): string {
@@ -86,56 +28,25 @@ function truncateText(text: string, maxLen: number): string {
   return text.slice(0, maxLen) + '...';
 }
 
-interface PageInfo {
-  items: Array<{ record: Record<string, unknown>; startField?: number; endField?: number }>;
-}
-
-function calculateRecordPages(
-  records: Array<Record<string, unknown>>,
-  enabledFields: string[],
-  margin: MarginOption,
-  fontSize: FontSizeOption,
-  pageHeightPx: number,
-  marginsPx: PageMargins
-): PageInfo[] {
-  const fs = FONT_SIZES[fontSize];
-  const contentHeight = pageHeightPx - marginsPx.top - marginsPx.bottom;
-  const rowHeight = fs * 1.4 + 18;
-  const maxRowsPerPage = Math.max(1, Math.floor(contentHeight / rowHeight));
-
-  const pages: PageInfo[] = [];
-  for (const record of records) {
-    const totalFields = enabledFields.length;
-    if (totalFields === 0) {
-      pages.push({ items: [{ record, startField: 0, endField: 0 }] });
-      continue;
-    }
-    let offset = 0;
-    while (offset < totalFields) {
-      const end = Math.min(offset + maxRowsPerPage, totalFields);
-      pages.push({ items: [{ record, startField: offset, endField: end }] });
-      offset = end;
-    }
-  }
-  return pages;
+interface ViewPageInfo {
+  items: Array<{ record: Record<string, unknown> }>;
 }
 
 function calculateViewPages(
   records: Array<Record<string, unknown>>,
   enabledFields: string[],
-  _margin: MarginOption,
   fontSize: FontSizeOption,
   pageHeightPx: number,
-  marginsPx: PageMargins
-): PageInfo[] {
+  marginsPx: PageMargins,
+): ViewPageInfo[] {
   const contentHeight = pageHeightPx - marginsPx.top - marginsPx.bottom;
   const fs = FONT_SIZES[fontSize];
   const headerHeight = 32;
   const rowHeight = fs * 1.8 + 8;
   const recordGap = 4;
 
-  const pages: PageInfo[] = [];
-  let currentItems: PageInfo['items'] = [];
+  const pages: ViewPageInfo[] = [];
+  let currentItems: ViewPageInfo['items'] = [];
   let usedHeight = headerHeight;
 
   for (const record of records) {
@@ -157,7 +68,21 @@ function calculateViewPages(
 }
 
 const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
-  ({ records, enabledFields, margin, fontSize, mode, titleField, pageWidth, pageHeight, margins }, ref) => {
+  (
+    {
+      records,
+      enabledFields,
+      fontSize,
+      mode,
+      titleField,
+      pageWidth,
+      pageHeight,
+      margins,
+      fieldTypes,
+      tableName,
+    },
+    ref,
+  ) => {
     const contentRef = useRef<HTMLDivElement>(null);
 
     useImperativeHandle(ref, () => ({
@@ -171,58 +96,128 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     const pageWidthPx = Math.round(mmToPx(pageWidth));
     const pageHeightPx = Math.round(mmToPx(pageHeight));
-    const marginsPx = useMemo<PageMargins>(() => ({
-      top: Math.round(mmToPx(margins.top)),
-      right: Math.round(mmToPx(margins.right)),
-      bottom: Math.round(mmToPx(margins.bottom)),
-      left: Math.round(mmToPx(margins.left)),
-    }), [margins]);
-
-    const pages = useMemo(
-      () =>
-        mode === 'record'
-          ? calculateRecordPages(records, enabledFields, margin, fontSize, pageHeightPx, marginsPx)
-          : calculateViewPages(records, enabledFields, margin, fontSize, pageHeightPx, marginsPx),
-      [records, enabledFields, margin, fontSize, mode, pageHeightPx, marginsPx]
+    const marginsPx = useMemo<PageMargins>(
+      () => ({
+        top: Math.round(mmToPx(margins.top)),
+        right: Math.round(mmToPx(margins.right)),
+        bottom: Math.round(mmToPx(margins.bottom)),
+        left: Math.round(mmToPx(margins.left)),
+      }),
+      [margins],
     );
 
     const fs = FONT_SIZES[fontSize];
     const scaledWidth = pageWidthPx * 0.39;
 
-    const renderRecordPage = (page: PageInfo, pageIdx: number) => {
-      const item = page.items[0];
-      if (!item) return null;
-      const { record, startField = 0, endField = enabledFields.length } = item;
-      const title = formatFieldValue(record[titleField]) || formatFieldValue(record['标题']) || formatFieldValue(record['客户名称']) || formatFieldValue(record['零件代码']) || '未命名记录';
+    const contentWidthMm = pageWidth - margins.left - margins.right;
+    const contentHeightPx = pageHeightPx - marginsPx.top - marginsPx.bottom;
 
-      const pageFields = enabledFields.slice(startField, endField);
-      const leftFields = pageFields.filter((_: string, i: number) => i % 2 === 0);
-      const rightFields = pageFields.filter((_: string, i: number) => i % 2 === 1);
-      const maxRows = Math.max(leftFields.length, rightFields.length);
+    const recordPages = useMemo<PageLayout[]>(() => {
+      if (mode !== 'record' || records.length === 0) return [];
+      return layoutRecordPages({
+        fields: enabledFields,
+        record: records[0],
+        fieldTypes,
+        contentWidthMm,
+        contentHeightPx,
+        fontSize: fs,
+      });
+    }, [mode, records, enabledFields, fieldTypes, contentWidthMm, contentHeightPx, fs]);
 
-      const cellStyle: React.CSSProperties = {
-        border: '1px solid #d1d5db',
-        padding: '5px 10px',
-        verticalAlign: 'top',
+    const viewPages = useMemo<ViewPageInfo[]>(() => {
+      if (mode !== 'view') return [];
+      return calculateViewPages(records, enabledFields, fontSize, pageHeightPx, marginsPx);
+    }, [mode, records, enabledFields, fontSize, pageHeightPx, marginsPx]);
+
+    const totalPages = mode === 'record' ? recordPages.length : viewPages.length;
+
+    const renderFieldUnit = (unit: FieldUnit, fullWidth: boolean) => {
+      const unitStyle: React.CSSProperties = {
+        display: 'flex',
+        minHeight: UNIT_MIN_HEIGHT,
+        padding: '4px 0',
+        borderBottom: '1px solid #f0f0f0',
       };
+
       const labelStyle: React.CSSProperties = {
-        ...cellStyle,
-        width: '12%',
-        backgroundColor: '#f3f4f6',
-        color: '#374151',
-        fontWeight: 500,
-        whiteSpace: 'nowrap',
+        width: LABEL_WIDTH,
+        flexShrink: 0,
+        color: '#646A73',
+        fontSize: 12,
+        lineHeight: `${LINE_HEIGHT}px`,
+        textAlign: 'left',
       };
+
       const valueStyle: React.CSSProperties = {
-        ...cellStyle,
-        width: '38%',
-        color: '#111827',
+        flex: 1,
+        minWidth: 0,
+        color: '#1F2329',
+        fontSize: 12,
+        lineHeight: `${LINE_HEIGHT}px`,
+        textAlign: 'left',
         wordBreak: 'break-word',
+        overflowWrap: 'break-word',
       };
-      const emptyStyle: React.CSSProperties = {
-        ...cellStyle,
-        width: '12%',
-      };
+
+      return (
+        <div key={unit.field} style={unitStyle}>
+          <div style={labelStyle}>{unit.field}</div>
+          <div style={valueStyle}>{unit.value}</div>
+        </div>
+      );
+    };
+
+    const renderSegment = (segment: PageLayout['segments'][number]) => {
+      if (segment.type === 'fullwidth' && segment.fullWidthUnit) {
+        return (
+          <div
+            key={`full-${segment.fullWidthUnit.field}`}
+            style={{
+              margin: `${UNIT_GAP}px 0`,
+            }}
+          >
+            {renderFieldUnit(segment.fullWidthUnit, true)}
+          </div>
+        );
+      }
+
+      const columnGapPx = getColumnGapPx();
+      return (
+        <div
+          key={`cols-${segment.columns.length}`}
+          style={{
+            display: 'flex',
+            gap: columnGapPx,
+          }}
+        >
+          {segment.columns.map((col, colIdx) => (
+            <div
+              key={colIdx}
+              style={{
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              {col.map((unit) => renderFieldUnit(unit, false))}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    const renderRecordPage = (page: PageLayout, pageIdx: number) => {
+      const record = records[0];
+      const title =
+        formatFieldValue(record[titleField]) ||
+        formatFieldValue(record['标题']) ||
+        formatFieldValue(record['客户名称']) ||
+        formatFieldValue(record['零件代码']) ||
+        '未命名记录';
+
+      const printTime = new Date()
+        .toISOString()
+        .slice(0, 19)
+        .replace('T', ' ');
 
       return (
         <div
@@ -237,81 +232,81 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             paddingLeft: marginsPx.left,
             fontSize: fs,
             marginBottom: 30,
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
-          <div
-            className="font-semibold mb-3 pb-1.5 border-b-2 border-foreground/20 text-foreground"
-            style={{ fontSize: fs + 2 }}
-          >
-            {title}
+          {page.isFirst && (
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: '#1F2329',
+                textAlign: 'left',
+                paddingBottom: 8,
+                marginBottom: 12,
+                borderBottom: '2px solid #e5e5e5',
+                flexShrink: 0,
+              }}
+            >
+              {title}
+            </div>
+          )}
+
+          <div style={{ flex: 1 }}>
+            {page.segments.map((segment, segIdx) => renderSegment(segment))}
           </div>
 
-          <table
-            className="w-full"
-            style={{
-              fontSize: fs,
-              borderCollapse: 'collapse',
-              border: '1px solid #d1d5db',
-            }}
-          >
-            <tbody>
-              {Array.from({ length: maxRows }).map((_, rowIdx) => {
-                const lf = leftFields[rowIdx];
-                const rf = rightFields[rowIdx];
-
-                return (
-                  <tr
-                    key={rowIdx}
-                    style={{
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      breakInside: 'avoid-page' as any,
-                      pageBreakInside: 'avoid' as any,
-                    }}
-                  >
-                    {lf ? (
-                      <>
-                        <td style={labelStyle}>{lf}</td>
-                        <td style={valueStyle}>
-                          {formatFieldValue(record[lf]) || '-'}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={emptyStyle}></td>
-                        <td style={emptyStyle}></td>
-                      </>
-                    )}
-                    {rf ? (
-                      <>
-                        <td style={labelStyle}>{rf}</td>
-                        <td style={valueStyle}>
-                          {formatFieldValue(record[rf]) || '-'}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={emptyStyle}></td>
-                        <td style={emptyStyle}></td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
-            <span className="page-number text-[10px] text-muted-foreground">
-              第 {pageIdx + 1} / {pages.length} 页
-            </span>
-          </div>
+          {page.isLast ? (
+            <div
+              style={{
+                marginTop: 'auto',
+                paddingTop: 12,
+                borderTop: '1px solid #e5e5e5',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: 11,
+                color: '#86909C',
+                flexShrink: 0,
+              }}
+            >
+              <span>
+                {tableName}
+                {tableName ? ' · ' : ''}
+                {printTime}
+              </span>
+              <span>
+                第 {pageIdx + 1} / {totalPages} 页
+              </span>
+            </div>
+          ) : (
+            <div
+              style={{
+                marginTop: 'auto',
+                paddingTop: 12,
+                borderTop: '1px solid #e5e5e5',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                fontSize: 11,
+                color: '#86909C',
+                flexShrink: 0,
+              }}
+            >
+              <span>
+                第 {pageIdx + 1} / {totalPages} 页
+              </span>
+            </div>
+          )}
         </div>
       );
     };
 
-    const renderViewPage = (page: PageInfo, pageIdx: number) => {
+    const renderViewPage = (page: ViewPageInfo, pageIdx: number) => {
       const contentW = pageWidthPx - marginsPx.left - marginsPx.right;
-      const maxCellChars = Math.floor((contentW - enabledFields.length * 8) / (enabledFields.length * fs * 0.55));
+      const maxCellChars = Math.floor(
+        (contentW - enabledFields.length * 8) / (enabledFields.length * fs * 0.55),
+      );
 
       return (
         <div
@@ -344,10 +339,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             </thead>
             <tbody>
               {page.items.map((item, rowIdx) => (
-                <tr
-                  key={rowIdx}
-                  className={rowIdx % 2 === 0 ? 'bg-accent/30' : ''}
-                >
+                <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-accent/30' : ''}>
                   {enabledFields.map((field) => (
                     <td
                       key={field}
@@ -355,7 +347,10 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
                       style={{ maxWidth: `${contentW / enabledFields.length}px` }}
                       title={formatFieldValue(item.record[field])}
                     >
-                      {truncateText(formatFieldValue(item.record[field]) || '-', Math.max(maxCellChars, 8))}
+                      {truncateText(
+                        formatFieldValue(item.record[field]) || '-',
+                        Math.max(maxCellChars, 8),
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -364,7 +359,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           </table>
           <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
             <span className="page-number text-[10px] text-muted-foreground">
-              第 {pageIdx + 1} / {pages.length} 页
+              第 {pageIdx + 1} / {totalPages} 页
             </span>
           </div>
         </div>
@@ -376,7 +371,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         <div
           style={{
             width: scaledWidth,
-            height: pages.length * pageHeightPx * 0.39 + (pages.length - 1) * 12,
+            height:
+              totalPages * pageHeightPx * 0.39 + (totalPages - 1) * 12,
             margin: '0 auto',
           }}
         >
@@ -389,16 +385,14 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               transformOrigin: 'top left',
             }}
           >
-            {pages.map((page, idx) =>
-              mode === 'record'
-                ? renderRecordPage(page, idx)
-                : renderViewPage(page, idx)
-            )}
+            {mode === 'record'
+              ? recordPages.map((page, idx) => renderRecordPage(page, idx))
+              : viewPages.map((page, idx) => renderViewPage(page, idx))}
           </div>
         </div>
       </div>
     );
-  }
+  },
 );
 
 PreviewCanvas.displayName = 'PreviewCanvas';

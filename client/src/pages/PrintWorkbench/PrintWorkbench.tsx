@@ -75,6 +75,8 @@ const PrintWorkbench = () => {
     sdkAvailable,
     loading,
     selectedRecords,
+    fieldTypes,
+    tableName,
   } = useBitableData();
 
   useEffect(() => {
@@ -238,6 +240,8 @@ const PrintWorkbench = () => {
         recordsWithIds={defaultRecords}
         selectedRecords={selectedRecords}
         allFields={allFields}
+        fieldTypes={fieldTypes}
+        tableName={tableName}
         onBack={() => setView('list')}
         onEdit={() => setView('config')}
         onUpdateFields={(fields) => handleUpdateFields(activeTemplate.id, fields)}
