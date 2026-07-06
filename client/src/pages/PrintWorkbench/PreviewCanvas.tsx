@@ -138,19 +138,22 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         display: 'flex',
         width: '100%',
         breakInside: 'avoid',
+        pageBreakInside: 'avoid',
+        overflow: 'hidden',
         marginTop: isFirst ? 0 : -1,
         columnSpan: isFullWidth ? 'all' : undefined,
       };
 
       const labelStyle: React.CSSProperties = {
-        width: LABEL_WIDTH,
+        minWidth: LABEL_WIDTH,
+        width: 'auto',
         flexShrink: 0,
-        background: '#F7F8FA',
-        border: '1px solid #E5E6EB',
+        background: 'hsl(33, 22%, 90%)',
+        border: '1px solid hsl(30, 8%, 88%)',
         borderRight: 'none',
         padding: '5px 8px',
         fontSize: 12,
-        color: '#1F2329',
+        color: 'hsl(0, 0%, 10%)',
         lineHeight: '22px',
         textAlign: 'left',
       };
@@ -159,10 +162,10 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         flex: 1,
         minWidth: 0,
         background: '#FFFFFF',
-        border: '1px solid #E5E6EB',
+        border: '1px solid hsl(30, 8%, 88%)',
         padding: '5px 8px',
         fontSize: 12,
-        color: '#1F2329',
+        color: 'hsl(0, 0%, 10%)',
         lineHeight: '22px',
         textAlign: 'left',
         wordBreak: 'break-word',
@@ -170,7 +173,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       };
 
       return (
-        <div key={unit.field} style={rowStyle}>
+        <div key={unit.field} className="field-row" style={rowStyle}>
           <div style={labelStyle}>{unit.field}</div>
           <div style={valueStyle}>{unit.value}</div>
         </div>
@@ -191,7 +194,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       return (
         <div
           key={pageIdx}
-          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
+          className="print-page bg-card shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
             minHeight: pageHeightPx,
@@ -210,11 +213,11 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 fontSize: 14,
                 fontWeight: 700,
-                color: '#1F2329',
+                color: 'hsl(0, 0%, 10%)',
                 textAlign: 'left',
                 paddingBottom: 8,
                 marginBottom: 12,
-                borderBottom: '2px solid #e5e5e5',
+                borderBottom: '2px solid hsl(30, 8%, 88%)',
                 flexShrink: 0,
               }}
             >
@@ -227,6 +230,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 columns: 2,
                 columnGap: `${COLUMN_GAP_PX}px`,
+                columnFill: 'balance',
               }}
             >
               {page.units.map((unit, idx) => renderFieldUnit(unit, idx === 0))}
@@ -238,12 +242,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 marginTop: 'auto',
                 paddingTop: 12,
-                borderTop: '1px solid #E5E6EB',
+                borderTop: '1px solid hsl(30, 8%, 88%)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-end',
                 fontSize: 11,
-                color: '#86909C',
+                color: 'hsl(25, 5%, 40%)',
                 flexShrink: 0,
               }}
             >
@@ -260,11 +264,11 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 marginTop: 'auto',
                 paddingTop: 12,
-                borderTop: '1px solid #E5E6EB',
+                borderTop: '1px solid hsl(30, 8%, 88%)',
                 display: 'flex',
                 justifyContent: 'flex-end',
                 fontSize: 11,
-                color: '#86909C',
+                color: 'hsl(25, 5%, 40%)',
                 flexShrink: 0,
               }}
             >
