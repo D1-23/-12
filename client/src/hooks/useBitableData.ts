@@ -6,6 +6,7 @@ import {
   getRecordById,
   getSelectedRecordIds,
   getRecordsByIds,
+  getTableName,
   type BitableRecord,
 } from '@/api/bitable';
 
@@ -18,6 +19,8 @@ interface UseBitableDataResult {
   loading: boolean;
   loadAllRecords: () => void;
   selectedRecords: BitableRecord[];
+  fieldTypes: Record<string, number>;
+  tableName: string;
 }
 
 const MAX_INIT_RETRIES = 3;
@@ -36,6 +39,8 @@ export function useBitableData(): UseBitableDataResult {
   const [sdkAvailable, setSdkAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedRecords, setSelectedRecords] = useState<BitableRecord[]>([]);
+  const [fieldTypes, setFieldTypes] = useState<Record<string, number>>({});
+  const [tableName, setTableName] = useState<string>('');
   const fieldMapRef = useRef<Map<string, string>>(new Map());
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const allRecordsLoadedRef = useRef(false);
@@ -105,13 +110,19 @@ export function useBitableData(): UseBitableDataResult {
         if (cancelled) return;
 
         const map = new Map<string, string>();
+        const types: Record<string, number> = {};
         for (const m of metaList) {
           map.set(m.id, m.name);
+          types[m.name] = m.type;
         }
         fieldMapRef.current = map;
         setAllFields(metaList.map((m) => m.name));
+        setFieldTypes(types);
         setSdkAvailable(true);
         logger.info('Bitable 字段元数据加载成功');
+
+        const name = await getTableName();
+        if (!cancelled && name) setTableName(name);
 
         const { bitable: sdk } = await import('@lark-base-open/js-sdk');
         const selection = await sdk.base.getSelection();
@@ -185,5 +196,7 @@ export function useBitableData(): UseBitableDataResult {
     loading,
     loadAllRecords,
     selectedRecords,
+    fieldTypes,
+    tableName,
   };
 }

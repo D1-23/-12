@@ -18,6 +18,8 @@ interface TemplatePreviewProps {
   recordsWithIds: RecordWithId[];
   selectedRecords: RecordWithId[];
   allFields: string[];
+  fieldTypes: Record<string, number>;
+  tableName: string;
   onBack: () => void;
   onEdit: () => void;
   onUpdateFields?: (fields: string[]) => void;
@@ -28,6 +30,8 @@ const TemplatePreview = ({
   recordsWithIds,
   selectedRecords,
   allFields,
+  fieldTypes,
+  tableName,
   onBack,
   onEdit,
   onUpdateFields,
@@ -216,6 +220,8 @@ const TemplatePreview = ({
           pageWidth={template.pageWidth}
           pageHeight={template.pageHeight}
           margins={template.margins}
+          fieldTypes={fieldTypes}
+          tableName={tableName}
         />
       </div>
 

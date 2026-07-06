@@ -159,6 +159,17 @@ export async function selectRecordsFromBitable(): Promise<BitableRecord[]> {
   return records;
 }
 
+export async function getTableName(): Promise<string> {
+  const sdk = await getSDK();
+  if (!sdk) return '';
+  try {
+    const table = await sdk.base.getActiveTable();
+    return (table as { name?: string }).name ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export async function getRecordById(
   recordId: string,
   fieldMap: Map<string, string>
