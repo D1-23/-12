@@ -37,7 +37,7 @@ const TemplatePreview = ({
   const [showFieldDialog, setShowFieldDialog] = useState(false);
   const [batchDismissed, setBatchDismissed] = useState(false);
 
-  const hasMultipleSelected = selectedRecords.length > 0;
+  const hasMultipleSelected = selectedRecords.length > 1;
   const showBatchPrompt = hasMultipleSelected && !batchMode && !batchDismissed;
 
   const displayRecords = useMemo(() => {
