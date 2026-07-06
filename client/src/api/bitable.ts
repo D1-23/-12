@@ -98,6 +98,32 @@ export async function getAllRecords(
   return allRecords;
 }
 
+export async function selectRecordsFromBitable(): Promise<BitableRecord[]> {
+  const sdk = await getSDK();
+  if (!sdk) throw new Error('Bitable SDK 不可用');
+
+  const { tableId, viewId } = await sdk.base.getSelection();
+  const recordIdList: string[] = await sdk.ui.selectRecordIdList(tableId, viewId);
+  if (!recordIdList || recordIdList.length === 0) return [];
+
+  const metaList = await getFieldMetaList();
+  const fieldMap = new Map<string, string>();
+  for (const m of metaList) fieldMap.set(m.id, m.name);
+
+  const table = await sdk.base.getActiveTable();
+  const records: BitableRecord[] = [];
+  for (const recordId of recordIdList) {
+    const rec = await table.getRecordById(recordId);
+    if (rec) {
+      records.push(mapRecordFields(
+        { recordId, fields: rec.fields as Record<string, unknown> },
+        fieldMap,
+      ));
+    }
+  }
+  return records;
+}
+
 export async function getRecordById(
   recordId: string,
   fieldMap: Map<string, string>
