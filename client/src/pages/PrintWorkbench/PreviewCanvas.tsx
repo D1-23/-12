@@ -193,35 +193,25 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       const item = page.items[0];
       if (!item) return null;
       const { record, startField = 0, endField = enabledFields.length } = item;
-      const title = formatFieldValue(record[titleField]) || formatFieldValue(record['标题']) || formatFieldValue(record['客户名称']) || formatFieldValue(record['零件代码']) || '未命名记录';
 
       const pageFields = enabledFields.slice(startField, endField);
-      const leftFields = pageFields.filter((_: string, i: number) => i % 2 === 0);
-      const rightFields = pageFields.filter((_: string, i: number) => i % 2 === 1);
-      const maxRows = Math.max(leftFields.length, rightFields.length);
 
-      const cellStyle: React.CSSProperties = {
-        border: '1px solid #d1d5db',
-        padding: '5px 10px',
-        verticalAlign: 'top',
-      };
       const labelStyle: React.CSSProperties = {
-        ...cellStyle,
-        width: '12%',
+        border: '1px solid #d1d5db',
+        padding: '6px 12px',
+        verticalAlign: 'top',
+        width: '28%',
         backgroundColor: '#f3f4f6',
         color: '#374151',
         fontWeight: 500,
         whiteSpace: 'nowrap',
       };
       const valueStyle: React.CSSProperties = {
-        ...cellStyle,
-        width: '38%',
+        border: '1px solid #d1d5db',
+        padding: '6px 12px',
+        verticalAlign: 'top',
         color: '#111827',
         wordBreak: 'break-word',
-      };
-      const emptyStyle: React.CSSProperties = {
-        ...cellStyle,
-        width: '12%',
       };
 
       return (
@@ -239,13 +229,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             marginBottom: 30,
           }}
         >
-          <div
-            className="font-semibold mb-3 pb-1.5 border-b-2 border-foreground/20 text-foreground"
-            style={{ fontSize: fs + 2 }}
-          >
-            {title}
-          </div>
-
           <table
             className="w-full"
             style={{
@@ -255,48 +238,21 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             }}
           >
             <tbody>
-              {Array.from({ length: maxRows }).map((_, rowIdx) => {
-                const lf = leftFields[rowIdx];
-                const rf = rightFields[rowIdx];
-
-                return (
-                  <tr
-                    key={rowIdx}
-                    style={{
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      breakInside: 'avoid-page' as any,
-                      pageBreakInside: 'avoid' as any,
-                    }}
-                  >
-                    {lf ? (
-                      <>
-                        <td style={labelStyle}>{lf}</td>
-                        <td style={valueStyle}>
-                          {formatFieldValue(record[lf]) || '-'}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={emptyStyle}></td>
-                        <td style={emptyStyle}></td>
-                      </>
-                    )}
-                    {rf ? (
-                      <>
-                        <td style={labelStyle}>{rf}</td>
-                        <td style={valueStyle}>
-                          {formatFieldValue(record[rf]) || '-'}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={emptyStyle}></td>
-                        <td style={emptyStyle}></td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
+              {pageFields.map((field) => (
+                <tr
+                  key={field}
+                  style={{
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    breakInside: 'avoid-page' as any,
+                    pageBreakInside: 'avoid' as any,
+                  }}
+                >
+                  <td style={labelStyle}>{field}</td>
+                  <td style={valueStyle}>
+                    {formatFieldValue(record[field]) || '-'}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
 
