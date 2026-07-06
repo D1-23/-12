@@ -148,12 +148,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         minWidth: LABEL_WIDTH,
         width: 'auto',
         flexShrink: 0,
-        background: 'hsl(33, 22%, 90%)',
-        border: '1px solid hsl(30, 8%, 88%)',
+        background: '#F7F8FA',
+        border: '1px solid #E5E6EB',
         borderRight: 'none',
         padding: '5px 8px',
         fontSize: 12,
-        color: 'hsl(0, 0%, 10%)',
+        color: '#1F2329',
         lineHeight: '22px',
         textAlign: 'left',
       };
@@ -162,10 +162,10 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         flex: 1,
         minWidth: 0,
         background: '#FFFFFF',
-        border: '1px solid hsl(30, 8%, 88%)',
+        border: '1px solid #E5E6EB',
         padding: '5px 8px',
         fontSize: 12,
-        color: 'hsl(0, 0%, 10%)',
+        color: '#1F2329',
         lineHeight: '22px',
         textAlign: 'left',
         wordBreak: 'break-word',
@@ -194,7 +194,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       return (
         <div
           key={pageIdx}
-          className="print-page bg-card shadow-sm overflow-hidden"
+          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
             minHeight: pageHeightPx,
@@ -213,11 +213,11 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 fontSize: 14,
                 fontWeight: 700,
-                color: 'hsl(0, 0%, 10%)',
+                color: '#1F2329',
                 textAlign: 'left',
                 paddingBottom: 8,
                 marginBottom: 12,
-                borderBottom: '2px solid hsl(30, 8%, 88%)',
+                borderBottom: '2px solid #e5e5e5',
                 flexShrink: 0,
               }}
             >
@@ -242,12 +242,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 marginTop: 'auto',
                 paddingTop: 12,
-                borderTop: '1px solid hsl(30, 8%, 88%)',
+                borderTop: '1px solid #E5E6EB',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-end',
                 fontSize: 11,
-                color: 'hsl(25, 5%, 40%)',
+                color: '#86909C',
                 flexShrink: 0,
               }}
             >
@@ -264,11 +264,11 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 marginTop: 'auto',
                 paddingTop: 12,
-                borderTop: '1px solid hsl(30, 8%, 88%)',
+                borderTop: '1px solid #E5E6EB',
                 display: 'flex',
                 justifyContent: 'flex-end',
                 fontSize: 11,
-                color: 'hsl(25, 5%, 40%)',
+                color: '#86909C',
                 flexShrink: 0,
               }}
             >
