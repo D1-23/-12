@@ -4,6 +4,8 @@ import {
   getRecordsByPage,
   getFieldMetaList,
   getRecordById,
+  getSelectedRecordIds,
+  getRecordsByIds,
   type BitableRecord,
 } from '@/api/bitable';
 
@@ -15,6 +17,7 @@ interface UseBitableDataResult {
   sdkAvailable: boolean;
   loading: boolean;
   loadAllRecords: () => void;
+  selectedRecords: BitableRecord[];
 }
 
 export function useBitableData(): UseBitableDataResult {
@@ -24,9 +27,11 @@ export function useBitableData(): UseBitableDataResult {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [sdkAvailable, setSdkAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedRecords, setSelectedRecords] = useState<BitableRecord[]>([]);
   const fieldMapRef = useRef<Map<string, string>>(new Map());
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const allRecordsLoadedRef = useRef(false);
+  const prevSelectionKeyRef = useRef<string>('');
 
   const fetchSelectedRecord = useCallback(async (recordId: string) => {
     try {
@@ -61,6 +66,26 @@ export function useBitableData(): UseBitableDataResult {
     }
   }, [recordsLoading]);
 
+  const fetchSelectedRecords = useCallback(async () => {
+    try {
+      const selectedIds = await getSelectedRecordIds();
+      const selectionKey = selectedIds.sort().join(',');
+      if (selectionKey === prevSelectionKeyRef.current) return;
+      prevSelectionKeyRef.current = selectionKey;
+
+      if (selectedIds.length === 0) {
+        setSelectedRecords([]);
+        return;
+      }
+
+      const records = await getRecordsByIds(selectedIds, fieldMapRef.current);
+      setSelectedRecords(records);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error(`获取选中记录列表失败: ${msg}`);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -86,12 +111,15 @@ export function useBitableData(): UseBitableDataResult {
           await fetchSelectedRecord(selection.recordId);
         }
 
+        await fetchSelectedRecords();
+
         const unsub = sdk.base.onSelectionChange(async (e) => {
           if (cancelled) return;
           const sel = e.data;
           if (sel?.recordId) {
             await fetchSelectedRecord(sel.recordId);
           }
+          await fetchSelectedRecords();
         });
 
         if (cancelled) {
@@ -116,7 +144,7 @@ export function useBitableData(): UseBitableDataResult {
       unsubscribeRef.current?.();
       unsubscribeRef.current = null;
     };
-  }, [fetchSelectedRecord]);
+  }, [fetchSelectedRecord, fetchSelectedRecords]);
 
   return {
     selectedRecord,
@@ -126,5 +154,6 @@ export function useBitableData(): UseBitableDataResult {
     sdkAvailable,
     loading,
     loadAllRecords,
+    selectedRecords,
   };
 }

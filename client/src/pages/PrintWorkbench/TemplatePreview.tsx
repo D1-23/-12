@@ -1,12 +1,11 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import type { PrintTemplate } from '@/types/template';
 import { TEMPLATE_TYPE_LABELS, mmToPx } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
-import RecordSelector from './RecordSelector';
 import FieldSettingsDialog from './FieldSettingsDialog';
 
 interface RecordWithId {
@@ -17,10 +16,8 @@ interface RecordWithId {
 interface TemplatePreviewProps {
   template: PrintTemplate;
   recordsWithIds: RecordWithId[];
-  allRecords: RecordWithId[];
+  selectedRecords: RecordWithId[];
   allFields: string[];
-  recordsLoading: boolean;
-  onLoadAllRecords: () => void;
   onBack: () => void;
   onEdit: () => void;
   onUpdateFields?: (fields: string[]) => void;
@@ -29,66 +26,42 @@ interface TemplatePreviewProps {
 const TemplatePreview = ({
   template,
   recordsWithIds,
-  allRecords,
+  selectedRecords,
   allFields,
-  recordsLoading,
-  onLoadAllRecords,
   onBack,
   onEdit,
   onUpdateFields,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
   const [batchMode, setBatchMode] = useState(false);
-  const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(new Set());
-  const [showSelector, setShowSelector] = useState(false);
   const [showFieldDialog, setShowFieldDialog] = useState(false);
+  const [batchDismissed, setBatchDismissed] = useState(false);
+
+  const hasMultipleSelected = selectedRecords.length > 0;
+  const showBatchPrompt = hasMultipleSelected && !batchMode && !batchDismissed;
 
   const displayRecords = useMemo(() => {
-    if (batchMode) {
-      return allRecords
-        .filter((r) => batchSelectedIds.has(r.id))
-        .map((r) => r.record);
+    if (batchMode && selectedRecords.length > 0) {
+      return selectedRecords.map((r) => r.record);
     }
     return recordsWithIds.map((r) => r.record);
-  }, [batchMode, batchSelectedIds, allRecords, recordsWithIds]);
+  }, [batchMode, selectedRecords, recordsWithIds]);
 
   const displayCount = displayRecords.length;
-  const totalBatchCount = allRecords.length > 0 ? allRecords.length : recordsWithIds.length;
 
-  const handleBatchToggle = useCallback((id: string) => {
-    setBatchSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const handleEnterBatch = useCallback(() => {
+    setBatchMode(true);
+    setBatchDismissed(false);
   }, []);
 
-  const handleBatchSelectAll = useCallback(() => {
-    const source = allRecords.length > 0 ? allRecords : recordsWithIds;
-    setBatchSelectedIds(new Set(source.map((r) => r.id)));
-  }, [allRecords, recordsWithIds]);
-
-  const handleBatchDeselectAll = useCallback(() => {
-    setBatchSelectedIds(new Set());
+  const handleDismissBatch = useCallback(() => {
+    setBatchDismissed(true);
   }, []);
 
-  const handleOpenSelector = useCallback(() => {
-    setShowSelector(true);
-    onLoadAllRecords();
-    if (!batchMode) {
-      setBatchMode(true);
-      const ids = allRecords.length > 0 ? allRecords : recordsWithIds;
-      setBatchSelectedIds(new Set(ids.map((r) => r.id)));
-    }
-  }, [onLoadAllRecords, batchMode, allRecords, recordsWithIds]);
-
-  const handleCloseSelector = useCallback(() => {
-    setShowSelector(false);
-    if (batchSelectedIds.size === 0) {
-      setBatchMode(false);
-    }
-  }, [batchSelectedIds.size]);
+  const handleExitBatch = useCallback(() => {
+    setBatchMode(false);
+    setBatchDismissed(false);
+  }, []);
 
   const handlePrint = useCallback(() => {
     const content = previewRef.current?.getContent();
@@ -173,8 +146,6 @@ const TemplatePreview = ({
     }
   }, [template]);
 
-  const selectorSource = allRecords.length > 0 ? allRecords : recordsWithIds;
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card shrink-0">
@@ -209,6 +180,30 @@ const TemplatePreview = ({
         </Button>
       </div>
 
+      {showBatchPrompt && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border-b border-primary/20 shrink-0">
+          <CheckSquare className="size-3.5 text-primary shrink-0" />
+          <span className="text-xs text-primary flex-1 truncate">
+            已选择 {selectedRecords.length} 条记录
+          </span>
+          <Button
+            size="sm"
+            className="h-6 px-2 text-[11px] bg-primary text-primary-foreground"
+            onClick={handleEnterBatch}
+          >
+            批量预览
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-muted-foreground"
+            onClick={handleDismissBatch}
+          >
+            <X className="size-3" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex-1 relative overflow-auto">
         <PreviewCanvas
           ref={previewRef}
@@ -222,18 +217,6 @@ const TemplatePreview = ({
           pageHeight={template.pageHeight}
           margins={template.margins}
         />
-        {showSelector && (
-          <RecordSelector
-            recordsWithIds={selectorSource}
-            selectedIds={batchSelectedIds}
-            onToggle={handleBatchToggle}
-            onSelectAll={handleBatchSelectAll}
-            onDeselectAll={handleBatchDeselectAll}
-            titleField={template.titleField}
-            onClose={handleCloseSelector}
-            loading={recordsLoading}
-          />
-        )}
       </div>
 
       {displayCount === 0 && (
@@ -241,7 +224,7 @@ const TemplatePreview = ({
           {recordsWithIds.length === 0
             ? '暂无数据，请在多维表格中添加记录。'
             : batchMode
-              ? '未选择记录，请点击下方按钮选择要打印的记录。'
+              ? '未选择记录，请在多维表格中勾选记录。'
               : '请在多维表格中点击选择一条记录。'}
         </div>
       )}
@@ -249,18 +232,20 @@ const TemplatePreview = ({
       <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card shrink-0">
         <span className="text-[11px] text-muted-foreground truncate flex-1">
           {template.fields.length} 个字段 · {batchMode
-            ? `${batchSelectedIds.size}/${totalBatchCount} 条记录`
+            ? `${selectedRecords.length} 条记录`
             : `${recordsWithIds.length > 0 ? 1 : 0} 条记录`}
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2 text-xs gap-1"
-          onClick={handleOpenSelector}
-        >
-          <CheckSquare className="size-3.5" />
-          {batchMode ? '已选' : '选择'}
-        </Button>
+        {batchMode && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1 text-muted-foreground"
+            onClick={handleExitBatch}
+          >
+            <X className="size-3.5" />
+            退出批量
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
