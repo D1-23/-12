@@ -4,7 +4,7 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { bitable } from '@/api';
 import type { PrintTemplate, TemplateType } from '@/types/template';
-import { loadTemplates, saveTemplates } from '@/types/template';
+import { loadTemplates, saveTemplates, migrateTemplate, DEFAULT_PAGE_MARGINS } from '@/types/template';
 import { useBitableSelection } from '@/hooks/useBitableSelection';
 import TemplateList from './TemplateList';
 import TemplatePreview from './TemplatePreview';
@@ -65,6 +65,11 @@ function createDefaultTemplates(allFields: string[]): PrintTemplate[] {
       titleField: allFields[0] || '',
       pinned: false,
       createdAt: now,
+      paperSize: 'A4',
+      orientation: 'portrait',
+      pageWidth: 210,
+      pageHeight: 297,
+      margins: { ...DEFAULT_PAGE_MARGINS },
     },
     {
       id: generateId(),
@@ -76,6 +81,11 @@ function createDefaultTemplates(allFields: string[]): PrintTemplate[] {
       titleField: allFields[0] || '',
       pinned: false,
       createdAt: now - 1,
+      paperSize: 'A4',
+      orientation: 'portrait',
+      pageWidth: 210,
+      pageHeight: 297,
+      margins: { ...DEFAULT_PAGE_MARGINS },
     },
   ];
 }
@@ -112,9 +122,12 @@ const PrintWorkbench = () => {
         const fields = Array.from(fieldSet);
         setAllFields(fields);
 
-        const stored = loadTemplates();
+        const stored = loadTemplates().map(migrateTemplate);
         if (stored.length > 0) {
           setTemplates(stored);
+          if (stored.some((t) => !t.paperSize)) {
+            saveTemplates(stored);
+          }
         } else {
           const defaults = createDefaultTemplates(fields);
           setTemplates(defaults);
@@ -183,6 +196,11 @@ const PrintWorkbench = () => {
         titleField: allFields[0] || '',
         pinned: false,
         createdAt: Date.now(),
+        paperSize: 'A4',
+        orientation: 'portrait',
+        pageWidth: 210,
+        pageHeight: 297,
+        margins: { ...DEFAULT_PAGE_MARGINS },
       };
       const updated = [...templates, newTemplate];
       setTemplates(updated);

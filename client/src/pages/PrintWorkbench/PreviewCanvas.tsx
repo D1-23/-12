@@ -1,6 +1,6 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
-import type { TemplateType, MarginOption, FontSizeOption } from '@/types/template';
-import { MARGIN_VALUES, FONT_SIZES } from '@/types/template';
+import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
+import { MARGIN_VALUES, FONT_SIZES, mmToPx } from '@/types/template';
 
 export interface PreviewCanvasHandle {
   getContent: () => string;
@@ -14,6 +14,9 @@ interface PreviewCanvasProps {
   fontSize: FontSizeOption;
   mode: TemplateType;
   titleField: string;
+  pageWidth: number;
+  pageHeight: number;
+  margins: PageMargins;
 }
 
 const A4_WIDTH = 794;
@@ -91,11 +94,12 @@ function calculateRecordPages(
   records: Array<Record<string, unknown>>,
   enabledFields: string[],
   margin: MarginOption,
-  fontSize: FontSizeOption
+  fontSize: FontSizeOption,
+  pageHeightPx: number,
+  marginsPx: PageMargins
 ): PageInfo[] {
-  const marginPx = MARGIN_VALUES[margin];
   const fs = FONT_SIZES[fontSize];
-  const contentHeight = A4_HEIGHT - marginPx * 2;
+  const contentHeight = pageHeightPx - marginsPx.top - marginsPx.bottom;
   const titleBlockHeight = 36;
   const rowHeight = fs * 1.4 + 18;
   const maxRowsPerPage = Math.max(1, Math.floor((contentHeight - titleBlockHeight) / rowHeight));
@@ -120,11 +124,12 @@ function calculateRecordPages(
 function calculateViewPages(
   records: Array<Record<string, unknown>>,
   enabledFields: string[],
-  margin: MarginOption,
-  fontSize: FontSizeOption
+  _margin: MarginOption,
+  fontSize: FontSizeOption,
+  pageHeightPx: number,
+  marginsPx: PageMargins
 ): PageInfo[] {
-  const marginPx = MARGIN_VALUES[margin];
-  const contentHeight = A4_HEIGHT - marginPx * 2;
+  const contentHeight = pageHeightPx - marginsPx.top - marginsPx.bottom;
   const fs = FONT_SIZES[fontSize];
   const headerHeight = 32;
   const rowHeight = fs * 1.8 + 8;
@@ -153,7 +158,7 @@ function calculateViewPages(
 }
 
 const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
-  ({ records, enabledFields, margin, fontSize, mode, titleField }, ref) => {
+  ({ records, enabledFields, margin, fontSize, mode, titleField, pageWidth, pageHeight, margins }, ref) => {
     const contentRef = useRef<HTMLDivElement>(null);
 
     useImperativeHandle(ref, () => ({
@@ -165,17 +170,25 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       },
     }));
 
+    const pageWidthPx = Math.round(mmToPx(pageWidth));
+    const pageHeightPx = Math.round(mmToPx(pageHeight));
+    const marginsPx = useMemo<PageMargins>(() => ({
+      top: Math.round(mmToPx(margins.top)),
+      right: Math.round(mmToPx(margins.right)),
+      bottom: Math.round(mmToPx(margins.bottom)),
+      left: Math.round(mmToPx(margins.left)),
+    }), [margins]);
+
     const pages = useMemo(
       () =>
         mode === 'record'
-          ? calculateRecordPages(records, enabledFields, margin, fontSize)
-          : calculateViewPages(records, enabledFields, margin, fontSize),
-      [records, enabledFields, margin, fontSize, mode]
+          ? calculateRecordPages(records, enabledFields, margin, fontSize, pageHeightPx, marginsPx)
+          : calculateViewPages(records, enabledFields, margin, fontSize, pageHeightPx, marginsPx),
+      [records, enabledFields, margin, fontSize, mode, pageHeightPx, marginsPx]
     );
 
-    const marginPx = MARGIN_VALUES[margin];
     const fs = FONT_SIZES[fontSize];
-    const scaledWidth = A4_WIDTH * 0.39;
+    const scaledWidth = pageWidthPx * 0.39;
 
     const renderRecordPage = (page: PageInfo, pageIdx: number) => {
       const item = page.items[0];
@@ -217,9 +230,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           key={pageIdx}
           className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
-            width: A4_WIDTH,
-            minHeight: A4_HEIGHT,
-            padding: marginPx,
+            width: pageWidthPx,
+            minHeight: pageHeightPx,
+            paddingTop: marginsPx.top,
+            paddingRight: marginsPx.right,
+            paddingBottom: marginsPx.bottom,
+            paddingLeft: marginsPx.left,
             fontSize: fs,
             marginBottom: 30,
           }}
@@ -295,16 +311,20 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     };
 
     const renderViewPage = (page: PageInfo, pageIdx: number) => {
-      const maxCellChars = Math.floor((A4_WIDTH - marginPx * 2 - enabledFields.length * 8) / (enabledFields.length * fs * 0.55));
+      const contentW = pageWidthPx - marginsPx.left - marginsPx.right;
+      const maxCellChars = Math.floor((contentW - enabledFields.length * 8) / (enabledFields.length * fs * 0.55));
 
       return (
         <div
           key={pageIdx}
           className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
-            width: A4_WIDTH,
-            minHeight: A4_HEIGHT,
-            padding: marginPx,
+            width: pageWidthPx,
+            minHeight: pageHeightPx,
+            paddingTop: marginsPx.top,
+            paddingRight: marginsPx.right,
+            paddingBottom: marginsPx.bottom,
+            paddingLeft: marginsPx.left,
             fontSize: fs,
             marginBottom: 30,
           }}
@@ -316,7 +336,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
                   <th
                     key={field}
                     className="text-left font-semibold py-1.5 px-1 border-b-2 border-foreground/20 text-muted-foreground whitespace-nowrap"
-                    style={{ maxWidth: `${(A4_WIDTH - marginPx * 2) / enabledFields.length}px` }}
+                    style={{ maxWidth: `${contentW / enabledFields.length}px` }}
                   >
                     {field}
                   </th>
@@ -333,7 +353,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
                     <td
                       key={field}
                       className="py-1 px-1 border-b border-border/40 text-foreground"
-                      style={{ maxWidth: `${(A4_WIDTH - marginPx * 2) / enabledFields.length}px` }}
+                      style={{ maxWidth: `${contentW / enabledFields.length}px` }}
                       title={formatFieldValue(item.record[field])}
                     >
                       {truncateText(formatFieldValue(item.record[field]) || '-', Math.max(maxCellChars, 8))}
@@ -357,7 +377,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         <div
           style={{
             width: scaledWidth,
-            height: pages.length * A4_HEIGHT * 0.39 + (pages.length - 1) * 12,
+            height: pages.length * pageHeightPx * 0.39 + (pages.length - 1) * 12,
             margin: '0 auto',
           }}
         >
@@ -365,7 +385,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             ref={contentRef}
             id="preview-content"
             style={{
-              width: A4_WIDTH,
+              width: pageWidthPx,
               transform: 'scale(0.39)',
               transformOrigin: 'top left',
             }}

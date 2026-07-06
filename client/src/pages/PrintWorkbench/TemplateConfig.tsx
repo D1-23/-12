@@ -17,11 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { PrintTemplate, MarginOption, FontSizeOption, TemplateType } from '@/types/template';
+import type { PrintTemplate, MarginOption, FontSizeOption, TemplateType, PaperSize, Orientation } from '@/types/template';
 import {
   MARGIN_LABELS,
   FONT_SIZE_LABELS,
   TEMPLATE_TYPE_LABELS,
+  PAPER_SIZE_LABELS,
+  ORIENTATION_LABELS,
+  PAPER_SIZES,
+  DEFAULT_PAGE_MARGINS,
 } from '@/types/template';
 
 interface TemplateConfigProps {
@@ -142,49 +146,194 @@ const TemplateConfig = ({
           </Select>
         </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="text-xs text-muted-foreground mb-1 block">
-              边距
-            </label>
-            <Select
-              value={draft.margin}
-              onValueChange={(v) =>
-                setDraft((prev) => ({ ...prev, margin: v as MarginOption }))
-              }
-            >
-              <SelectTrigger size="sm" className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(MARGIN_LABELS) as MarginOption[]).map((key) => (
-                  <SelectItem key={key} value={key}>
-                    {MARGIN_LABELS[key]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1">
-            <label className="text-xs text-muted-foreground mb-1 block">
-              字号
-            </label>
-            <div className="flex items-center rounded-md border border-border overflow-hidden h-8">
-              {FONT_OPTIONS.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setDraft((prev) => ({ ...prev, fontSize: opt }))}
-                  className={`flex-1 text-xs h-full transition-colors ${
-                    draft.fontSize === opt
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-card text-muted-foreground hover:bg-accent'
-                  }`}
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">
+            页面尺寸
+          </label>
+          <div className="border border-border rounded-md p-2.5 space-y-2.5">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <div className="text-[10px] text-muted-foreground mb-0.5">纸张类型</div>
+                <Select
+                  value={draft.paperSize}
+                  onValueChange={(v) => {
+                    const size = v as PaperSize;
+                    setDraft((prev) => {
+                      if (size === 'Custom') {
+                        return { ...prev, paperSize: size };
+                      }
+                      const dims = PAPER_SIZES[size];
+                      return {
+                        ...prev,
+                        paperSize: size,
+                        pageWidth: prev.orientation === 'portrait' ? dims.width : dims.height,
+                        pageHeight: prev.orientation === 'portrait' ? dims.height : dims.width,
+                      };
+                    });
+                  }}
                 >
-                  {FONT_SIZE_LABELS[opt]}
-                </button>
-              ))}
+                  <SelectTrigger size="sm" className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(PAPER_SIZE_LABELS) as PaperSize[]).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {PAPER_SIZE_LABELS[key]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] text-muted-foreground mb-0.5">页面方向</div>
+                <div className="flex items-center rounded-md border border-border overflow-hidden h-7">
+                  {(['portrait', 'landscape'] as Orientation[]).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          orientation: opt,
+                          pageWidth: prev.pageHeight,
+                          pageHeight: prev.pageWidth,
+                        }))
+                      }
+                      className={`flex-1 text-[10px] h-full transition-colors ${
+                        draft.orientation === opt
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {ORIENTATION_LABELS[opt]}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <div className="text-[10px] text-muted-foreground mb-0.5">宽度 (mm)</div>
+                <Input
+                  type="number"
+                  className="h-7 text-xs"
+                  value={draft.pageWidth}
+                  disabled={draft.paperSize !== 'Custom'}
+                  onChange={(e) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      pageWidth: Number(e.target.value) || prev.pageWidth,
+                      paperSize: 'Custom',
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] text-muted-foreground mb-0.5">高度 (mm)</div>
+                <Input
+                  type="number"
+                  className="h-7 text-xs"
+                  value={draft.pageHeight}
+                  disabled={draft.paperSize !== 'Custom'}
+                  onChange={(e) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      pageHeight: Number(e.target.value) || prev.pageHeight,
+                      paperSize: 'Custom',
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] text-muted-foreground mb-1">页边距 (mm)</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <div className="text-[9px] text-muted-foreground mb-0.5">上</div>
+                  <Input
+                    type="number"
+                    className="h-7 text-xs"
+                    value={draft.margins.top}
+                    min={0}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        margins: { ...prev.margins, top: Number(e.target.value) || 0 },
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <div className="text-[9px] text-muted-foreground mb-0.5">下</div>
+                  <Input
+                    type="number"
+                    className="h-7 text-xs"
+                    value={draft.margins.bottom}
+                    min={0}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        margins: { ...prev.margins, bottom: Number(e.target.value) || 0 },
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <div className="text-[9px] text-muted-foreground mb-0.5">左</div>
+                  <Input
+                    type="number"
+                    className="h-7 text-xs"
+                    value={draft.margins.left}
+                    min={0}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        margins: { ...prev.margins, left: Number(e.target.value) || 0 },
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <div className="text-[9px] text-muted-foreground mb-0.5">右</div>
+                  <Input
+                    type="number"
+                    className="h-7 text-xs"
+                    value={draft.margins.right}
+                    min={0}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        margins: { ...prev.margins, right: Number(e.target.value) || 0 },
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">
+            字号
+          </label>
+          <div className="flex items-center rounded-md border border-border overflow-hidden h-8">
+            {FONT_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setDraft((prev) => ({ ...prev, fontSize: opt }))}
+                className={`flex-1 text-xs h-full transition-colors ${
+                  draft.fontSize === opt
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card text-muted-foreground hover:bg-accent'
+                }`}
+              >
+                {FONT_SIZE_LABELS[opt]}
+              </button>
+            ))}
           </div>
         </div>
 

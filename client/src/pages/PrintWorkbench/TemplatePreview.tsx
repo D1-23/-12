@@ -181,6 +181,9 @@ const TemplatePreview = ({
           fontSize={template.fontSize}
           mode={template.type}
           titleField={template.titleField}
+          pageWidth={template.pageWidth}
+          pageHeight={template.pageHeight}
+          margins={template.margins}
         />
         {showSelector && (
           <RecordSelector
