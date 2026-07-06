@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,14 @@ const TemplatePreview = ({
   );
   const [showSelector, setShowSelector] = useState(false);
   const [showFieldDialog, setShowFieldDialog] = useState(false);
+  const hasInitSelectedRef = useRef(false);
+
+  useEffect(() => {
+    if (!hasInitSelectedRef.current && recordsWithIds.length > 0) {
+      hasInitSelectedRef.current = true;
+      setSelectedIds(new Set(recordsWithIds.map((r) => r.id)));
+    }
+  }, [recordsWithIds]);
 
   const filteredRecords = useMemo(
     () => recordsWithIds.filter((r) => selectedIds.has(r.id)).map((r) => r.record),
