@@ -1,5 +1,5 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
-import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
+import type { TemplateType, MarginOption, FontSizeOption, PageMargins, TableLayout, CellStyle } from '@/types/template';
 import { MARGIN_VALUES, FONT_SIZES, mmToPx } from '@/types/template';
 
 export interface PreviewCanvasHandle {
@@ -17,6 +17,7 @@ interface PreviewCanvasProps {
   pageWidth: number;
   pageHeight: number;
   margins: PageMargins;
+  tableLayout?: TableLayout;
 }
 
 const A4_WIDTH = 794;
@@ -157,7 +158,7 @@ function calculateViewPages(
 }
 
 const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
-  ({ records, enabledFields, margin, fontSize, mode, titleField, pageWidth, pageHeight, margins }, ref) => {
+  ({ records, enabledFields, margin, fontSize, mode, titleField, pageWidth, pageHeight, margins, tableLayout }, ref) => {
     const contentRef = useRef<HTMLDivElement>(null);
 
     useImperativeHandle(ref, () => ({
@@ -193,11 +194,130 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       const item = page.items[0];
       if (!item) return null;
       const { record, startField = 0, endField = enabledFields.length } = item;
-
       const pageFields = enabledFields.slice(startField, endField);
 
+      if (!tableLayout) {
+        const labelStyle: React.CSSProperties = {
+          border: '1px solid #d1d5db',
+          padding: '6px 12px',
+          verticalAlign: 'top',
+          width: '28%',
+          backgroundColor: '#f3f4f6',
+          color: '#374151',
+          fontWeight: 500,
+          whiteSpace: 'nowrap',
+        };
+        const valueStyle: React.CSSProperties = {
+          border: '1px solid #d1d5db',
+          padding: '6px 12px',
+          verticalAlign: 'top',
+          color: '#111827',
+          wordBreak: 'break-word',
+        };
+        return (
+          <div key={pageIdx} className="print-page bg-card rounded-md shadow-sm overflow-hidden"
+            style={{ width: pageWidthPx, minHeight: pageHeightPx, paddingTop: marginsPx.top, paddingRight: marginsPx.right, paddingBottom: marginsPx.bottom, paddingLeft: marginsPx.left, fontSize: fs, marginBottom: 30 }}>
+            <table className="w-full" style={{ fontSize: fs, borderCollapse: 'collapse', border: '1px solid #d1d5db' }}>
+              <tbody>
+                {pageFields.map((field) => (
+                  <tr key={field} style={{ breakInside: 'avoid-page' as React.CSSProperties['breakInside'], pageBreakInside: 'avoid' }}>
+                    <td style={labelStyle}>{field}</td>
+                    <td style={valueStyle}>{formatFieldValue(record[field]) || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
+              <span className="page-number text-[10px] text-muted-foreground">第 {pageIdx + 1} / {pages.length} 页</span>
+            </div>
+          </div>
+        );
+      }
+
+      const layout = tableLayout;
+      const borderStyle = layout.borders.show ? `1px solid ${layout.borders.color}` : 'none';
+
+      if (layout.tableContent) {
+        const occupied = new Map<string, boolean>();
+        for (const mc of layout.mergedCells) {
+          for (let r = 0; r < mc.rowSpan; r++) {
+            for (let c = 0; c < mc.colSpan; c++) {
+              if (r === 0 && c === 0) continue;
+              occupied.set(`${mc.row + r}-${mc.col + c}`, true);
+            }
+          }
+        }
+
+        const headerRowCount = layout.headerRows;
+        const footerRowCount = layout.footerRows;
+        const totalRows = enabledFields.length;
+        const bodyStart = headerRowCount;
+        const bodyEnd = totalRows - footerRowCount;
+
+        const renderCellForRow = (rowIdx: number, field: string, colIdx: number, isHeader: boolean) => {
+          if (occupied.get(`${rowIdx}-${colIdx}`)) return null;
+          const merge = layout.mergedCells.find((m) => m.row === rowIdx && m.col === colIdx);
+          const cs: CellStyle = layout.cellStyles[`${rowIdx}-${colIdx}`] ?? {};
+          const cellStyle: React.CSSProperties = {
+            border: borderStyle,
+            padding: '6px 12px',
+            verticalAlign: 'top',
+            wordBreak: 'break-word',
+            backgroundColor: cs.bg ?? (isHeader ? '#f3f4f6' : undefined),
+            color: cs.color ?? (isHeader ? '#374151' : '#111827'),
+            textAlign: cs.align ?? 'left',
+            fontWeight: cs.bold ? 'bold' : (isHeader ? 500 : 'normal'),
+          };
+          if (layout.colWidths[colIdx] && !merge?.colSpan) {
+            cellStyle.width = `${layout.colWidths[colIdx]}%`;
+          }
+          const Tag = isHeader ? 'th' : 'td';
+          const extraProps: Record<string, unknown> = {};
+          if (merge?.rowSpan && merge.rowSpan > 1) extraProps.rowSpan = merge.rowSpan;
+          if (merge?.colSpan && merge.colSpan > 1) extraProps.colSpan = merge.colSpan;
+          return (
+            <Tag key={`${rowIdx}-${colIdx}`} style={cellStyle} {...extraProps}>
+              {isHeader ? field : (formatFieldValue(record[field]) || '-')}
+            </Tag>
+          );
+        };
+
+        const renderRow = (rowIdx: number, isHeader: boolean) => {
+          const field = enabledFields[rowIdx] ?? '';
+          return (
+            <tr key={`r-${rowIdx}`} style={{ breakInside: 'avoid-page' as React.CSSProperties['breakInside'], pageBreakInside: 'avoid' }}>
+              {renderCellForRow(rowIdx, field, 0, isHeader)}
+            </tr>
+          );
+        };
+
+        return (
+          <div key={pageIdx} className="print-page bg-card rounded-md shadow-sm overflow-hidden"
+            style={{ width: pageWidthPx, minHeight: pageHeightPx, paddingTop: marginsPx.top, paddingRight: marginsPx.right, paddingBottom: marginsPx.bottom, paddingLeft: marginsPx.left, fontSize: fs, marginBottom: 30 }}>
+            <table className="w-full" style={{ fontSize: fs, borderCollapse: 'collapse', border: borderStyle }}>
+              {headerRowCount > 0 && (
+                <thead>
+                  {Array.from({ length: headerRowCount }).map((_, ri) => renderRow(ri, true))}
+                </thead>
+              )}
+              <tbody>
+                {enabledFields.slice(bodyStart, bodyEnd).map((_, i) => renderRow(bodyStart + i, false))}
+              </tbody>
+              {footerRowCount > 0 && (
+                <tfoot>
+                  {Array.from({ length: footerRowCount }).map((_, ri) => renderRow(totalRows - footerRowCount + ri, true))}
+                </tfoot>
+              )}
+            </table>
+            <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
+              <span className="page-number text-[10px] text-muted-foreground">第 {pageIdx + 1} / {pages.length} 页</span>
+            </div>
+          </div>
+        );
+      }
+
       const labelStyle: React.CSSProperties = {
-        border: '1px solid #d1d5db',
+        border: borderStyle,
         padding: '6px 12px',
         verticalAlign: 'top',
         width: '28%',
@@ -207,7 +327,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         whiteSpace: 'nowrap',
       };
       const valueStyle: React.CSSProperties = {
-        border: '1px solid #d1d5db',
+        border: borderStyle,
         padding: '6px 12px',
         verticalAlign: 'top',
         color: '#111827',
@@ -215,51 +335,24 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       };
 
       return (
-        <div
-          key={pageIdx}
-          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
-          style={{
-            width: pageWidthPx,
-            minHeight: pageHeightPx,
-            paddingTop: marginsPx.top,
-            paddingRight: marginsPx.right,
-            paddingBottom: marginsPx.bottom,
-            paddingLeft: marginsPx.left,
-            fontSize: fs,
-            marginBottom: 30,
-          }}
-        >
-          <table
-            className="w-full"
-            style={{
-              fontSize: fs,
-              borderCollapse: 'collapse',
-              border: '1px solid #d1d5db',
-            }}
-          >
+        <div key={pageIdx} className="print-page bg-card rounded-md shadow-sm overflow-hidden"
+          style={{ width: pageWidthPx, minHeight: pageHeightPx, paddingTop: marginsPx.top, paddingRight: marginsPx.right, paddingBottom: marginsPx.bottom, paddingLeft: marginsPx.left, fontSize: fs, marginBottom: 30 }}>
+          <table className="w-full" style={{ fontSize: fs, borderCollapse: 'collapse', border: borderStyle }}>
             <tbody>
-              {pageFields.map((field) => (
-                <tr
-                  key={field}
-                  style={{
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    breakInside: 'avoid-page' as any,
-                    pageBreakInside: 'avoid' as any,
-                  }}
-                >
-                  <td style={labelStyle}>{field}</td>
-                  <td style={valueStyle}>
-                    {formatFieldValue(record[field]) || '-'}
-                  </td>
-                </tr>
-              ))}
+              {pageFields.map((field, ri) => {
+                const cs: CellStyle = layout.cellStyles[`${ri}-0`] ?? {};
+                const vs: CellStyle = layout.cellStyles[`${ri}-1`] ?? {};
+                return (
+                  <tr key={field} style={{ breakInside: 'avoid-page' as React.CSSProperties['breakInside'], pageBreakInside: 'avoid' }}>
+                    <td style={{ ...labelStyle, backgroundColor: cs.bg ?? labelStyle.backgroundColor, color: cs.color ?? labelStyle.color }}>{field}</td>
+                    <td style={{ ...valueStyle, backgroundColor: vs.bg, color: vs.color }}>{formatFieldValue(record[field]) || '-'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-
           <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
-            <span className="page-number text-[10px] text-muted-foreground">
-              第 {pageIdx + 1} / {pages.length} 页
-            </span>
+            <span className="page-number text-[10px] text-muted-foreground">第 {pageIdx + 1} / {pages.length} 页</span>
           </div>
         </div>
       );
