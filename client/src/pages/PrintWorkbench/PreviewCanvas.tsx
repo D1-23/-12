@@ -1,8 +1,8 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
-import { formatFieldValue, formatPrintTime, LABEL_WIDTH, COLUMN_GAP_PX } from './field-utils';
-import { layoutRecordPages, type PageLayout, type FieldUnit } from './layout-engine';
+import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
+import { layoutRecordPages, type PageLayout } from './layout-engine';
 
 interface RecordPageLayout extends PageLayout {
   recordIndex: number;
@@ -181,32 +181,39 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       tableLayout: 'fixed',
     };
 
-    const renderColumnTable = (units: FieldUnit[], colIdx: number) => {
-      if (units.length === 0) return null;
+    const renderMergedTable = (page: RecordPageLayout) => {
+      const col0 = page.columns[0] || [];
+      const col1 = page.columns[1] || [];
+      const maxRows = Math.max(col0.length, col1.length);
+      const fullWidthUnits = page.units.filter((u) => u.column === -1);
+
       return (
-        <table key={`col-${colIdx}`} style={tableStyle}>
+        <table style={tableStyle}>
+          <colgroup>
+            <col style={{ width: LABEL_WIDTH }} />
+            <col style={{ width: 'auto' }} />
+            <col style={{ width: LABEL_WIDTH }} />
+            <col style={{ width: 'auto' }} />
+          </colgroup>
           <tbody>
-            {units.map((unit) => (
-              <tr key={unit.field} className="field-row">
+            {Array.from({ length: maxRows }, (_, rowIdx) => (
+              <tr key={`row-${rowIdx}`} className="field-row">
+                <td style={labelTdStyle}>{col0[rowIdx]?.field ?? ''}</td>
+                <td style={valueTdStyle}>{col0[rowIdx]?.value ?? ''}</td>
+                <td style={labelTdStyle}>{col1[rowIdx]?.field ?? ''}</td>
+                <td style={valueTdStyle}>{col1[rowIdx]?.value ?? ''}</td>
+              </tr>
+            ))}
+            {fullWidthUnits.map((unit, idx) => (
+              <tr key={`full-${idx}`} className="field-row">
                 <td style={labelTdStyle}>{unit.field}</td>
-                <td style={valueTdStyle}>{unit.value}</td>
+                <td style={valueTdStyle} colSpan={3}>{unit.value}</td>
               </tr>
             ))}
           </tbody>
         </table>
       );
     };
-
-    const renderFullWidthTable = (unit: FieldUnit, idx: number) => (
-      <table key={`full-${idx}`} style={{ ...tableStyle, marginTop: idx === 0 ? 0 : -1 }}>
-        <tbody>
-          <tr className="field-row">
-            <td style={labelTdStyle}>{unit.field}</td>
-            <td style={valueTdStyle}>{unit.value}</td>
-          </tr>
-        </tbody>
-      </table>
-    );
 
     const renderRecordPage = (page: RecordPageLayout, pageIdx: number) => {
       const record = records[page.recordIndex];
@@ -253,17 +260,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             </div>
           )}
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', gap: `${COLUMN_GAP_PX}px`, alignItems: 'flex-start' }}>
-              {page.columns.map((colUnits, colIdx) => (
-                <div key={`col-wrap-${colIdx}`} style={{ flex: 1, minWidth: 0 }}>
-                  {renderColumnTable(colUnits, colIdx)}
-                </div>
-              ))}
-            </div>
-            {page.units
-              .filter((u) => u.column === -1)
-              .map((unit, idx) => renderFullWidthTable(unit, idx))}
+          <div style={{ flex: 1 }}>
+            {renderMergedTable(page)}
           </div>
 
           {page.isLast ? (
@@ -376,14 +374,15 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     return (
       <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background py-3">
-        <div
-          style={{
-            width: scaledWidth,
-            height:
-              totalPages * pageHeightPx * 0.39 + (totalPages - 1) * 12,
-            margin: '0 auto',
-          }}
-        >
+          <div
+            style={{
+              width: scaledWidth,
+              height:
+                totalPages * pageHeightPx * 0.39 + (totalPages - 1) * 12,
+              margin: '0 auto',
+              overflow: 'hidden',
+            }}
+          >
           <div
             ref={contentRef}
             id="preview-content"
