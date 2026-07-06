@@ -22,34 +22,18 @@ export interface MergedRow {
   unit?: FieldUnit;
 }
 
-export interface PageLayout {
-  rows: MergedRow[];
-  pageNumber: number;
-  isFirst: boolean;
-  isLast: boolean;
-}
-
 export interface LayoutParams {
   fields: string[];
   record: Record<string, unknown>;
   fieldTypes: Record<string, number>;
   contentWidthMm: number;
-  contentHeightPx: number;
   fontSize: number;
 }
 
 const NUM_COLS = 2;
-const HEADER_HEIGHT = 50;
-const FOOTER_HEIGHT = 45;
 
-export function layoutRecordPages(params: LayoutParams): PageLayout[] {
-  const {
-    fields,
-    record,
-    fieldTypes,
-    contentWidthMm,
-    contentHeightPx,
-  } = params;
+export function buildMergedRows(params: LayoutParams): MergedRow[] {
+  const { fields, record, fieldTypes, contentWidthMm } = params;
 
   const contentWidthPx = Math.round(mmToPx(contentWidthMm));
   const valueWidthPx = Math.round(
@@ -100,53 +84,5 @@ export function layoutRecordPages(params: LayoutParams): PageLayout[] {
     mergedRows.push({ type: 'full', height: unit.height, unit });
   }
 
-  const pages: PageLayout[] = [];
-  let currentRows: MergedRow[] = [];
-  let accumulatedHeight = 0;
-  let isFirstPage = true;
-
-  for (const row of mergedRows) {
-    const availableHeight = isFirstPage
-      ? contentHeightPx - HEADER_HEIGHT - FOOTER_HEIGHT
-      : contentHeightPx - FOOTER_HEIGHT;
-
-    if (accumulatedHeight + row.height > availableHeight && currentRows.length > 0) {
-      pages.push({
-        rows: currentRows,
-        pageNumber: pages.length + 1,
-        isFirst: isFirstPage,
-        isLast: false,
-      });
-      currentRows = [];
-      accumulatedHeight = 0;
-      isFirstPage = false;
-    }
-
-    currentRows.push(row);
-    accumulatedHeight += row.height;
-  }
-
-  if (currentRows.length > 0) {
-    pages.push({
-      rows: currentRows,
-      pageNumber: pages.length + 1,
-      isFirst: isFirstPage,
-      isLast: false,
-    });
-  }
-
-  if (pages.length === 0) {
-    pages.push({
-      rows: [],
-      pageNumber: 1,
-      isFirst: true,
-      isLast: true,
-    });
-  }
-
-  for (let i = 0; i < pages.length; i++) {
-    pages[i].isLast = i === pages.length - 1;
-  }
-
-  return pages;
+  return mergedRows;
 }

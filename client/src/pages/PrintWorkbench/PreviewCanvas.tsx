@@ -2,11 +2,7 @@ import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
-import { layoutRecordPages, type PageLayout, type MergedRow } from './layout-engine';
-
-interface RecordPageLayout extends PageLayout {
-  recordIndex: number;
-}
+import { buildMergedRows, type MergedRow } from './layout-engine';
 
 export interface PreviewCanvasHandle {
   getContent: () => string;
@@ -32,45 +28,6 @@ function truncateText(text: string, maxLen: number): string {
   return text.slice(0, maxLen) + '...';
 }
 
-interface ViewPageInfo {
-  items: Array<{ record: Record<string, unknown> }>;
-}
-
-function calculateViewPages(
-  records: Array<Record<string, unknown>>,
-  enabledFields: string[],
-  fontSize: FontSizeOption,
-  pageHeightPx: number,
-  marginsPx: PageMargins,
-): ViewPageInfo[] {
-  const contentHeight = pageHeightPx - marginsPx.top - marginsPx.bottom;
-  const fs = FONT_SIZES[fontSize];
-  const headerHeight = 32;
-  const rowHeight = fs * 1.8 + 8;
-  const recordGap = 4;
-
-  const pages: ViewPageInfo[] = [];
-  let currentItems: ViewPageInfo['items'] = [];
-  let usedHeight = headerHeight;
-
-  for (const record of records) {
-    const neededHeight = rowHeight + recordGap;
-    if (usedHeight + neededHeight > contentHeight && currentItems.length > 0) {
-      pages.push({ items: currentItems });
-      currentItems = [];
-      usedHeight = headerHeight;
-    }
-    currentItems.push({ record });
-    usedHeight += neededHeight;
-  }
-
-  if (currentItems.length > 0) {
-    pages.push({ items: currentItems });
-  }
-
-  return pages;
-}
-
 const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
   (
     {
@@ -80,7 +37,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       mode,
       titleField,
       pageWidth,
-      pageHeight,
       margins,
       fieldTypes,
       tableName,
@@ -99,7 +55,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     }));
 
     const pageWidthPx = Math.round(mmToPx(pageWidth));
-    const pageHeightPx = Math.round(mmToPx(pageHeight));
     const marginsPx = useMemo<PageMargins>(
       () => ({
         top: Math.round(mmToPx(margins.top)),
@@ -112,41 +67,20 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     const fs = FONT_SIZES[fontSize];
     const scaledWidth = pageWidthPx * 0.39;
-
     const contentWidthMm = pageWidth - margins.left - margins.right;
-    const contentHeightPx = pageHeightPx - marginsPx.top - marginsPx.bottom;
 
-    const recordPages = useMemo<RecordPageLayout[]>(() => {
-      if (mode !== 'record' || records.length === 0) return [];
-      const allPages: RecordPageLayout[] = [];
-      for (let rIdx = 0; rIdx < records.length; rIdx++) {
-        const pages = layoutRecordPages({
+    const recordMergedRows = useMemo<MergedRow[][]>(() => {
+      if (mode !== 'record') return [];
+      return records.map((record) =>
+        buildMergedRows({
           fields: enabledFields,
-          record: records[rIdx],
+          record,
           fieldTypes,
           contentWidthMm,
-          contentHeightPx,
           fontSize: fs,
-        });
-        for (const p of pages) {
-          allPages.push({ ...p, recordIndex: rIdx });
-        }
-      }
-      const total = allPages.length;
-      allPages.forEach((p, i) => {
-        p.pageNumber = i + 1;
-        p.isFirst = i === 0 || allPages[i - 1].recordIndex !== p.recordIndex;
-        p.isLast = i === total - 1 || allPages[i + 1].recordIndex !== p.recordIndex;
-      });
-      return allPages;
-    }, [mode, records, enabledFields, fieldTypes, contentWidthMm, contentHeightPx, fs]);
-
-    const viewPages = useMemo<ViewPageInfo[]>(() => {
-      if (mode !== 'view') return [];
-      return calculateViewPages(records, enabledFields, fontSize, pageHeightPx, marginsPx);
-    }, [mode, records, enabledFields, fontSize, pageHeightPx, marginsPx]);
-
-    const totalPages = mode === 'record' ? recordPages.length : viewPages.length;
+        }),
+      );
+    }, [mode, records, enabledFields, fieldTypes, contentWidthMm, fs]);
 
     const labelTdStyle: React.CSSProperties = {
       width: LABEL_WIDTH,
@@ -212,8 +146,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       </table>
     );
 
-    const renderRecordPage = (page: RecordPageLayout, pageIdx: number) => {
-      const record = records[page.recordIndex];
+    const renderRecord = (rows: MergedRow[], recordIdx: number) => {
+      const record = records[recordIdx];
       const title =
         formatFieldValue(record[titleField]) ||
         formatFieldValue(record['标题']) ||
@@ -222,102 +156,96 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         '未命名记录';
 
       const printTime = formatPrintTime();
+      const totalRecords = records.length;
 
       return (
         <div
-          key={pageIdx}
+          key={recordIdx}
           className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
-            minHeight: pageHeightPx,
             paddingTop: marginsPx.top,
             paddingRight: marginsPx.right,
             paddingBottom: marginsPx.bottom,
             paddingLeft: marginsPx.left,
             fontSize: fs,
             marginBottom: 30,
-            display: 'flex',
-            flexDirection: 'column',
           }}
         >
-          {page.isFirst && (
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: '#1F2329',
-                textAlign: 'left',
-                paddingBottom: 8,
-                marginBottom: 12,
-                borderBottom: '2px solid #e5e5e5',
-                flexShrink: 0,
-              }}
-            >
-              {title}
-            </div>
-          )}
-
-          <div style={{ flex: 1 }}>
-            {renderMergedTable(page.rows)}
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: '#1F2329',
+              textAlign: 'left',
+              paddingBottom: 8,
+              marginBottom: 12,
+              borderBottom: '2px solid #e5e5e5',
+            }}
+          >
+            {title}
           </div>
 
-          {page.isLast ? (
-            <div
-              style={{
-                marginTop: 'auto',
-                paddingTop: 12,
-                borderTop: '1px solid #E5E6EB',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-end',
-                fontSize: 11,
-                color: '#86909C',
-                flexShrink: 0,
-              }}
-            >
-              <div>
-                {tableName && <div>Table Name: {tableName}</div>}
-                <div>Print Time: {printTime}</div>
-              </div>
-              <span>
-                第 {pageIdx + 1} / {totalPages} 页
-              </span>
+          {renderMergedTable(rows)}
+
+          <div
+            style={{
+              marginTop: 12,
+              paddingTop: 12,
+              borderTop: '1px solid #E5E6EB',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              fontSize: 11,
+              color: '#86909C',
+            }}
+          >
+            <div>
+              {tableName && <div>Table Name: {tableName}</div>}
+              <div>Print Time: {printTime}</div>
             </div>
-          ) : (
-            <div
-              style={{
-                marginTop: 'auto',
-                paddingTop: 12,
-                borderTop: '1px solid #E5E6EB',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                fontSize: 11,
-                color: '#86909C',
-                flexShrink: 0,
-              }}
-            >
-              <span>
-                第 {pageIdx + 1} / {totalPages} 页
-              </span>
-            </div>
-          )}
+            <span>
+              第 {recordIdx + 1} / {totalRecords} 条
+            </span>
+          </div>
         </div>
       );
     };
 
-    const renderViewPage = (page: ViewPageInfo, pageIdx: number) => {
+    const renderView = () => {
       const contentW = pageWidthPx - marginsPx.left - marginsPx.right;
       const maxCellChars = Math.floor(
         (contentW - enabledFields.length * 8) / (enabledFields.length * fs * 0.55),
       );
+      const colWidth = contentW / enabledFields.length;
+
+      const thStyle: React.CSSProperties = {
+        textAlign: 'left',
+        fontWeight: 600,
+        padding: '6px 4px',
+        borderBottom: '2px solid rgba(31,35,41,0.2)',
+        color: '#86909C',
+        whiteSpace: 'nowrap',
+        maxWidth: `${colWidth}px`,
+        fontSize: fs - 1,
+      };
+
+      const tdStyle: React.CSSProperties = {
+        padding: '4px 4px',
+        borderBottom: '1px solid rgba(229,230,235,0.4)',
+        color: '#1F2329',
+        maxWidth: `${colWidth}px`,
+        fontSize: fs - 1,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      };
 
       return (
         <div
-          key={pageIdx}
           className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
-            minHeight: pageHeightPx,
             paddingTop: marginsPx.top,
             paddingRight: marginsPx.right,
             paddingBottom: marginsPx.bottom,
@@ -326,32 +254,30 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             marginBottom: 30,
           }}
         >
-          <table className="w-full border-collapse" style={{ fontSize: fs - 1 }}>
+          <table style={{ ...tableStyle, fontSize: fs - 1 }}>
             <thead>
               <tr>
                 {enabledFields.map((field) => (
-                  <th
-                    key={field}
-                    className="text-left font-semibold py-1.5 px-1 border-b-2 border-foreground/20 text-muted-foreground whitespace-nowrap"
-                    style={{ maxWidth: `${contentW / enabledFields.length}px` }}
-                  >
+                  <th key={field} style={thStyle}>
                     {field}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {page.items.map((item, rowIdx) => (
-                <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-accent/30' : ''}>
+              {records.map((record, rowIdx) => (
+                <tr
+                  key={rowIdx}
+                  style={rowIdx % 2 === 0 ? { background: 'rgba(240,244,248,0.5)' } : undefined}
+                >
                   {enabledFields.map((field) => (
                     <td
                       key={field}
-                      className="py-1 px-1 border-b border-border/40 text-foreground"
-                      style={{ maxWidth: `${contentW / enabledFields.length}px` }}
-                      title={formatFieldValue(item.record[field])}
+                      style={tdStyle}
+                      title={formatFieldValue(record[field])}
                     >
                       {truncateText(
-                        formatFieldValue(item.record[field]),
+                        formatFieldValue(record[field]),
                         Math.max(maxCellChars, 8),
                       )}
                     </td>
@@ -360,38 +286,24 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               ))}
             </tbody>
           </table>
-          <div className="page-break-line border-t border-dashed border-gray-300 mt-4 pt-1">
-            <span className="page-number text-[10px] text-muted-foreground">
-              第 {pageIdx + 1} / {totalPages} 页
-            </span>
-          </div>
         </div>
       );
     };
 
     return (
       <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background py-3">
-          <div
-            style={{
-              width: scaledWidth,
-              height:
-                totalPages * pageHeightPx * 0.39 + (totalPages - 1) * 12,
-              margin: '0 auto',
-              overflow: 'hidden',
-            }}
-          >
+        <div style={{ width: scaledWidth, margin: '0 auto' }}>
           <div
             ref={contentRef}
             id="preview-content"
             style={{
               width: pageWidthPx,
-              transform: 'scale(0.39)',
-              transformOrigin: 'top left',
+              zoom: 0.39,
             }}
           >
             {mode === 'record'
-              ? recordPages.map((page, idx) => renderRecordPage(page, idx))
-              : viewPages.map((page, idx) => renderViewPage(page, idx))}
+              ? recordMergedRows.map((rows, idx) => renderRecord(rows, idx))
+              : renderView()}
           </div>
         </div>
       </div>
