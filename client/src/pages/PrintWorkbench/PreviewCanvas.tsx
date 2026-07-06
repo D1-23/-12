@@ -4,6 +4,10 @@ import { FONT_SIZES, mmToPx } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH, COLUMN_GAP_PX } from './field-utils';
 import { layoutRecordPages, type PageLayout, type FieldUnit } from './layout-engine';
 
+interface RecordPageLayout extends PageLayout {
+  recordIndex: number;
+}
+
 export interface PreviewCanvasHandle {
   getContent: () => string;
   getPageElements: () => HTMLElement[];
@@ -112,16 +116,29 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const contentWidthMm = pageWidth - margins.left - margins.right;
     const contentHeightPx = pageHeightPx - marginsPx.top - marginsPx.bottom;
 
-    const recordPages = useMemo<PageLayout[]>(() => {
+    const recordPages = useMemo<RecordPageLayout[]>(() => {
       if (mode !== 'record' || records.length === 0) return [];
-      return layoutRecordPages({
-        fields: enabledFields,
-        record: records[0],
-        fieldTypes,
-        contentWidthMm,
-        contentHeightPx,
-        fontSize: fs,
+      const allPages: RecordPageLayout[] = [];
+      for (let rIdx = 0; rIdx < records.length; rIdx++) {
+        const pages = layoutRecordPages({
+          fields: enabledFields,
+          record: records[rIdx],
+          fieldTypes,
+          contentWidthMm,
+          contentHeightPx,
+          fontSize: fs,
+        });
+        for (const p of pages) {
+          allPages.push({ ...p, recordIndex: rIdx });
+        }
+      }
+      const total = allPages.length;
+      allPages.forEach((p, i) => {
+        p.pageNumber = i + 1;
+        p.isFirst = i === 0 || allPages[i - 1].recordIndex !== p.recordIndex;
+        p.isLast = i === total - 1 || allPages[i + 1].recordIndex !== p.recordIndex;
       });
+      return allPages;
     }, [mode, records, enabledFields, fieldTypes, contentWidthMm, contentHeightPx, fs]);
 
     const viewPages = useMemo<ViewPageInfo[]>(() => {
@@ -180,8 +197,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       );
     };
 
-    const renderRecordPage = (page: PageLayout, pageIdx: number) => {
-      const record = records[0];
+    const renderRecordPage = (page: RecordPageLayout, pageIdx: number) => {
+      const record = records[page.recordIndex];
       const title =
         formatFieldValue(record[titleField]) ||
         formatFieldValue(record['标题']) ||
