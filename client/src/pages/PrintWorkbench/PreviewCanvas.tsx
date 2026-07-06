@@ -89,12 +89,34 @@ interface PageInfo {
 
 function calculateRecordPages(
   records: Array<Record<string, unknown>>,
-  _enabledFields: string[],
-  _margin: MarginOption,
-  _fontSize: FontSizeOption
+  enabledFields: string[],
+  margin: MarginOption,
+  fontSize: FontSizeOption
 ): PageInfo[] {
-  // 每个记录单独一页，渲染为表单卡片
-  return records.map((record) => ({ items: [{ record }] }));
+  const marginPx = MARGIN_VALUES[margin];
+  const fs = FONT_SIZES[fontSize];
+  const contentHeight = A4_HEIGHT - marginPx * 2;
+  const titleBlockHeight = 50;
+  const rowPadding = 20;
+  const rowBorder = 2;
+  const rowHeight = fs * 1.6 + rowPadding + rowBorder;
+  const maxRowsPerPage = Math.max(1, Math.floor((contentHeight - titleBlockHeight) / rowHeight));
+
+  const pages: PageInfo[] = [];
+  for (const record of records) {
+    const totalFields = enabledFields.length;
+    if (totalFields === 0) {
+      pages.push({ items: [{ record, startField: 0, endField: 0 }] });
+      continue;
+    }
+    let offset = 0;
+    while (offset < totalFields) {
+      const end = Math.min(offset + maxRowsPerPage, totalFields);
+      pages.push({ items: [{ record, startField: offset, endField: end }] });
+      offset = end;
+    }
+  }
+  return pages;
 }
 
 function calculateViewPages(
@@ -160,8 +182,37 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const renderRecordPage = (page: PageInfo, pageIdx: number) => {
       const item = page.items[0];
       if (!item) return null;
-      const { record } = item;
+      const { record, startField = 0, endField = enabledFields.length } = item;
       const title = formatFieldValue(record[titleField]) || formatFieldValue(record['标题']) || formatFieldValue(record['客户名称']) || formatFieldValue(record['零件代码']) || '未命名记录';
+
+      const pageFields = enabledFields.slice(startField, endField);
+      const leftFields = pageFields.filter((_: string, i: number) => i % 2 === 0);
+      const rightFields = pageFields.filter((_: string, i: number) => i % 2 === 1);
+      const maxRows = Math.max(leftFields.length, rightFields.length);
+
+      const cellStyle: React.CSSProperties = {
+        border: '1px solid #d1d5db',
+        padding: '8px 12px',
+        verticalAlign: 'top',
+      };
+      const labelStyle: React.CSSProperties = {
+        ...cellStyle,
+        width: '12%',
+        backgroundColor: '#f3f4f6',
+        color: '#374151',
+        fontWeight: 500,
+        whiteSpace: 'nowrap',
+      };
+      const valueStyle: React.CSSProperties = {
+        ...cellStyle,
+        width: '38%',
+        color: '#111827',
+        wordBreak: 'break-word',
+      };
+      const emptyStyle: React.CSSProperties = {
+        ...cellStyle,
+        width: '12%',
+      };
 
       return (
         <div
@@ -175,7 +226,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             marginBottom: 30,
           }}
         >
-          {/* 标题 */}
           <div
             className="font-semibold mb-4 pb-2 border-b-2 border-foreground/20 text-foreground"
             style={{ fontSize: fs + 2 }}
@@ -183,7 +233,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             {title}
           </div>
 
-          {/* 表单网格 - 单列表格 */}
           <table
             className="w-full"
             style={{
@@ -193,40 +242,45 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             }}
           >
             <tbody>
-              {enabledFields.map((field, idx) => {
-                const cellStyle = {
-                  border: '1px solid #d1d5db',
-                  padding: '10px 12px',
-                  verticalAlign: 'top' as const,
-                };
-                const labelStyle = {
-                  ...cellStyle,
-                  width: '25%',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
-                  fontWeight: 500,
-                  whiteSpace: 'nowrap' as const,
-                };
-                const valueStyle = {
-                  ...cellStyle,
-                  width: '75%',
-                  color: '#111827',
-                  wordBreak: 'break-word' as const,
-                };
+              {Array.from({ length: maxRows }).map((_, rowIdx) => {
+                const lf = leftFields[rowIdx];
+                const rf = rightFields[rowIdx];
 
                 return (
                   <tr
-                    key={idx}
+                    key={rowIdx}
                     style={{
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       breakInside: 'avoid-page' as any,
                       pageBreakInside: 'avoid' as any,
                     }}
                   >
-                    <td style={labelStyle}>{field}</td>
-                    <td style={valueStyle}>
-                      {formatFieldValue(record[field]) || '-'}
-                    </td>
+                    {lf ? (
+                      <>
+                        <td style={labelStyle}>{lf}</td>
+                        <td style={valueStyle}>
+                          {formatFieldValue(record[lf]) || '-'}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={emptyStyle}></td>
+                        <td style={emptyStyle}></td>
+                      </>
+                    )}
+                    {rf ? (
+                      <>
+                        <td style={labelStyle}>{rf}</td>
+                        <td style={valueStyle}>
+                          {formatFieldValue(record[rf]) || '-'}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={emptyStyle}></td>
+                        <td style={emptyStyle}></td>
+                      </>
+                    )}
                   </tr>
                 );
               })}
