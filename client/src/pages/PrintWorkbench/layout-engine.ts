@@ -30,6 +30,13 @@ export interface LayoutParams {
   fontSize: number;
 }
 
+export interface PageLayout {
+  rows: MergedRow[];
+  pageNumber: number;
+  isFirst: boolean;
+  isLast: boolean;
+}
+
 const NUM_COLS = 2;
 
 export function buildMergedRows(params: LayoutParams): MergedRow[] {
@@ -85,4 +92,55 @@ export function buildMergedRows(params: LayoutParams): MergedRow[] {
   }
 
   return mergedRows;
+}
+
+const HEADER_HEIGHT = 50;
+const FOOTER_HEIGHT = 42;
+
+export function layoutRecordPages(
+  rows: MergedRow[],
+  contentHeightPx: number,
+): PageLayout[] {
+  const pages: PageLayout[] = [];
+  let currentRows: MergedRow[] = [];
+  let accumulatedHeight = 0;
+  let isFirstPage = true;
+  let pageNumber = 1;
+
+  for (const row of rows) {
+    const availableHeight = isFirstPage
+      ? contentHeightPx - HEADER_HEIGHT - FOOTER_HEIGHT
+      : contentHeightPx - FOOTER_HEIGHT;
+
+    if (accumulatedHeight + row.height > availableHeight && currentRows.length > 0) {
+      pages.push({
+        rows: currentRows,
+        pageNumber,
+        isFirst: pageNumber === 1,
+        isLast: false,
+      });
+      currentRows = [];
+      accumulatedHeight = 0;
+      isFirstPage = false;
+      pageNumber++;
+    }
+
+    currentRows.push(row);
+    accumulatedHeight += row.height;
+  }
+
+  if (currentRows.length > 0) {
+    pages.push({
+      rows: currentRows,
+      pageNumber,
+      isFirst: pageNumber === 1,
+      isLast: true,
+    });
+  }
+
+  pages.forEach((p, i) => {
+    p.isLast = i === pages.length - 1;
+  });
+
+  return pages;
 }
