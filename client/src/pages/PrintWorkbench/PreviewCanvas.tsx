@@ -84,11 +84,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     const labelTdStyle: React.CSSProperties = {
       width: LABEL_WIDTH,
-      background: '#F7F8FA',
-      border: '1px solid #E5E6EB',
+      background: '#FFFFFF',
+      border: '2px solid #333333',
       padding: '3px 6px',
       fontSize: 11,
-      color: '#1F2329',
+      fontWeight: 600,
+      color: '#000000',
       lineHeight: '16px',
       textAlign: 'left',
       verticalAlign: 'top',
@@ -98,7 +99,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     const valueTdStyle: React.CSSProperties = {
       background: '#FFFFFF',
-      border: '1px solid #E5E6EB',
+      border: '2px solid #333333',
       padding: '3px 6px',
       fontSize: 11,
       color: '#1F2329',
