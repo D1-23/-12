@@ -2,7 +2,10 @@ export type FieldLevel = 'single' | 'full' | 'block';
 
 export const LABEL_WIDTH = 110;
 export const LINE_HEIGHT = 22;
-export const UNIT_MIN_HEIGHT = 32;
+export const PADDING_VERTICAL = 10;
+export const BORDER_VERTICAL = 2;
+export const UNIT_BASE_HEIGHT = PADDING_VERTICAL + BORDER_VERTICAL;
+export const UNIT_MIN_HEIGHT = UNIT_BASE_HEIGHT + LINE_HEIGHT;
 export const UNIT_GAP = 0;
 export const COLUMN_GAP_PX = 16;
 
@@ -142,7 +145,6 @@ export function estimateUnitHeight(
 ): number {
   if (level === 'block') return 120;
 
-  const baseHeight = UNIT_MIN_HEIGHT;
   const charPerLine = Math.max(
     1,
     Math.floor(valueWidthPx / (LINE_HEIGHT * 0.55)),
@@ -155,7 +157,7 @@ export function estimateUnitHeight(
     lineCount = Math.max(explicitLines, wrappedLines);
   }
 
-  return Math.max(baseHeight, lineCount * LINE_HEIGHT + 12);
+  return Math.max(UNIT_MIN_HEIGHT, lineCount * LINE_HEIGHT + UNIT_BASE_HEIGHT);
 }
 
 export function formatPrintTime(): string {
