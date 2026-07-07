@@ -94,8 +94,8 @@ export function buildMergedRows(params: LayoutParams): MergedRow[] {
   return mergedRows;
 }
 
-const HEADER_HEIGHT = 50;
-const FOOTER_HEIGHT = 42;
+const HEADER_HEIGHT = 36;
+const FOOTER_HEIGHT = 30;
 
 export function layoutRecordPages(
   rows: MergedRow[],
