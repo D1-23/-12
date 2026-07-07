@@ -200,7 +200,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       return (
         <div
           key={pageIdx}
-          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
+          className="print-page bg-card rounded-md shadow-sm"
           style={{
             width: pageWidthPx,
             height: pageHeightPx,
@@ -231,7 +231,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             </div>
           )}
 
-          <div style={{ flex: 1, overflow: 'visible' }}>
+          <div style={{ flex: '0 0 auto' }}>
             {renderMergedTable(layout.rows)}
           </div>
 
