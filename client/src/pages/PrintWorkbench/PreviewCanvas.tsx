@@ -231,7 +231,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             </div>
           )}
 
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflow: 'visible' }}>
             {renderMergedTable(layout.rows)}
           </div>
 
