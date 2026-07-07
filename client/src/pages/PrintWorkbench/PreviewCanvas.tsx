@@ -86,10 +86,10 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       width: LABEL_WIDTH,
       background: '#F7F8FA',
       border: '1px solid #E5E6EB',
-      padding: '5px 8px',
-      fontSize: 12,
+      padding: '3px 6px',
+      fontSize: 11,
       color: '#1F2329',
-      lineHeight: '22px',
+      lineHeight: '16px',
       textAlign: 'left',
       verticalAlign: 'top',
       wordBreak: 'break-all',
@@ -99,10 +99,10 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const valueTdStyle: React.CSSProperties = {
       background: '#FFFFFF',
       border: '1px solid #E5E6EB',
-      padding: '5px 8px',
-      fontSize: 12,
+      padding: '3px 6px',
+      fontSize: 11,
       color: '#1F2329',
-      lineHeight: '22px',
+      lineHeight: '16px',
       textAlign: 'left',
       verticalAlign: 'top',
       wordBreak: 'break-word',
@@ -174,13 +174,14 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         >
           <div
             style={{
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 700,
+              lineHeight: '18px',
               color: '#1F2329',
               textAlign: 'left',
-              paddingBottom: 8,
-              marginBottom: 12,
-              borderBottom: '2px solid #e5e5e5',
+              paddingBottom: 4,
+              marginBottom: 2,
+              borderBottom: '1px solid #e5e5e5',
             }}
           >
             {title}
@@ -190,13 +191,14 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
           <div
             style={{
-              marginTop: 12,
-              paddingTop: 12,
+              marginTop: 4,
+              paddingTop: 4,
               borderTop: '1px solid #E5E6EB',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'flex-end',
               fontSize: 11,
+              lineHeight: '14px',
               color: '#86909C',
             }}
           >
