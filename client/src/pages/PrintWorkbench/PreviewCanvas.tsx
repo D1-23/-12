@@ -2,7 +2,7 @@ import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
-import { buildMergedRows, layoutRecordPages, type MergedRow, type PageLayout } from './layout-engine';
+import { buildMergedRows, type MergedRow } from './layout-engine';
 
 export interface PreviewCanvasHandle {
   getContent: () => string;
@@ -28,15 +28,6 @@ function truncateText(text: string, maxLen: number): string {
   return text.slice(0, maxLen) + '...';
 }
 
-interface RecordPageInfo {
-  layout: PageLayout;
-  recordIndex: number;
-  recordTitle: string;
-  totalPagesForRecord: number;
-  globalPageNumber: number;
-  totalGlobalPages: number;
-}
-
 const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
   (
     {
@@ -46,7 +37,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       mode,
       titleField,
       pageWidth,
-      pageHeight,
       margins,
       fieldTypes,
       tableName,
@@ -65,7 +55,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     }));
 
     const pageWidthPx = Math.round(mmToPx(pageWidth));
-    const pageHeightPx = Math.round(mmToPx(pageHeight));
     const marginsPx = useMemo<PageMargins>(
       () => ({
         top: Math.round(mmToPx(margins.top)),
@@ -79,55 +68,19 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const fs = FONT_SIZES[fontSize];
     const scaledWidth = pageWidthPx * 0.39;
     const contentWidthMm = pageWidth - margins.left - margins.right;
-    const contentHeightPx = pageHeightPx - marginsPx.top - marginsPx.bottom;
 
-    const recordPages = useMemo<RecordPageInfo[]>(() => {
-      if (mode !== 'record' || records.length === 0) return [];
-
-      const allPages: RecordPageInfo[] = [];
-      let globalPageNumber = 1;
-
-      for (let rIdx = 0; rIdx < records.length; rIdx++) {
-        const record = records[rIdx];
-        const title =
-          formatFieldValue(record[titleField]) ||
-          formatFieldValue(record['标题']) ||
-          formatFieldValue(record['客户名称']) ||
-          formatFieldValue(record['零件代码']) ||
-          '未命名记录';
-
-        const mergedRows = buildMergedRows({
+    const recordMergedRows = useMemo<MergedRow[][]>(() => {
+      if (mode !== 'record') return [];
+      return records.map((record) =>
+        buildMergedRows({
           fields: enabledFields,
           record,
           fieldTypes,
           contentWidthMm,
           fontSize: fs,
-        });
-
-        const layouts = layoutRecordPages(mergedRows, contentHeightPx);
-
-        for (const layout of layouts) {
-          allPages.push({
-            layout,
-            recordIndex: rIdx,
-            recordTitle: title,
-            totalPagesForRecord: layouts.length,
-            globalPageNumber,
-            totalGlobalPages: 0,
-          });
-          globalPageNumber++;
-        }
-      }
-
-      const totalGlobalPages = allPages.length;
-      allPages.forEach((p) => {
-        p.totalGlobalPages = totalGlobalPages;
-      });
-
-      return allPages;
-    }, [mode, records, enabledFields, fieldTypes, contentWidthMm, contentHeightPx, fs, titleField]);
-
-    const totalPreviewPages = recordPages.length;
+        }),
+      );
+    }, [mode, records, enabledFields, fieldTypes, contentWidthMm, fs]);
 
     const labelTdStyle: React.CSSProperties = {
       width: LABEL_WIDTH,
@@ -193,61 +146,58 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       </table>
     );
 
-    const renderRecordPage = (pageInfo: RecordPageInfo, pageIdx: number) => {
-      const { layout, recordTitle, totalPagesForRecord, globalPageNumber, totalGlobalPages } = pageInfo;
+    const renderRecord = (rows: MergedRow[], recordIdx: number) => {
+      const record = records[recordIdx];
+      const title =
+        formatFieldValue(record[titleField]) ||
+        formatFieldValue(record['标题']) ||
+        formatFieldValue(record['客户名称']) ||
+        formatFieldValue(record['零件代码']) ||
+        '未命名记录';
+
       const printTime = formatPrintTime();
+      const totalRecords = records.length;
 
       return (
         <div
-          key={pageIdx}
+          key={recordIdx}
           className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
-            height: pageHeightPx,
             paddingTop: marginsPx.top,
             paddingRight: marginsPx.right,
             paddingBottom: marginsPx.bottom,
             paddingLeft: marginsPx.left,
             fontSize: fs,
             marginBottom: 30,
-            display: 'flex',
-            flexDirection: 'column',
           }}
         >
-          {layout.isFirst && (
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                lineHeight: '20px',
-                color: '#1F2329',
-                textAlign: 'left',
-                paddingBottom: 8,
-                marginBottom: 12,
-                borderBottom: '2px solid #e5e5e5',
-                flexShrink: 0,
-              }}
-            >
-              {recordTitle}
-            </div>
-          )}
-
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            {renderMergedTable(layout.rows)}
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: '#1F2329',
+              textAlign: 'left',
+              paddingBottom: 8,
+              marginBottom: 12,
+              borderBottom: '2px solid #e5e5e5',
+            }}
+          >
+            {title}
           </div>
+
+          {renderMergedTable(rows)}
 
           <div
             style={{
-              marginTop: 'auto',
+              marginTop: 12,
               paddingTop: 12,
               borderTop: '1px solid #E5E6EB',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'flex-end',
               fontSize: 11,
-              lineHeight: '16px',
               color: '#86909C',
-              flexShrink: 0,
             }}
           >
             <div>
@@ -255,10 +205,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               <div>Print Time: {printTime}</div>
             </div>
             <span>
-              {totalPagesForRecord > 1
-                ? `第 ${layout.pageNumber} / ${totalPagesForRecord} 页 · `
-                : ''}
-              总第 {globalPageNumber} / {totalGlobalPages} 页
+              第 {recordIdx + 1} / {totalRecords} 条
             </span>
           </div>
         </div>
@@ -299,7 +246,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
-            height: pageHeightPx,
             paddingTop: marginsPx.top,
             paddingRight: marginsPx.right,
             paddingBottom: marginsPx.bottom,
@@ -352,12 +298,11 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             id="preview-content"
             style={{
               width: pageWidthPx,
-              transform: 'scale(0.39)',
-              transformOrigin: 'top left',
+              zoom: 0.39,
             }}
           >
             {mode === 'record'
-              ? recordPages.map((pageInfo, idx) => renderRecordPage(pageInfo, idx))
+              ? recordMergedRows.map((rows, idx) => renderRecord(rows, idx))
               : renderView()}
           </div>
         </div>
