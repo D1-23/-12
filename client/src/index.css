@@ -62,6 +62,12 @@
     break-inside: avoid-page !important;
     page-break-inside: avoid !important;
   }
+  #print-area table {
+    break-inside: auto !important;
+  }
+  #print-area thead {
+    display: table-header-group !important;
+  }
 
   #print-area .page-break-line {
     display: none !important;
