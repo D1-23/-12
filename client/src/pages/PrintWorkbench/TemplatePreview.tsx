@@ -82,12 +82,7 @@ const TemplatePreview = ({
     if (!content) return;
 
     const pageWidthPx = Math.round(mmToPx(template.pageWidth));
-    const marginArr = [
-      template.margins.top,
-      template.margins.right,
-      template.margins.bottom,
-      template.margins.left,
-    ];
+    const pageHeightPx = Math.round(mmToPx(template.pageHeight));
 
     try {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -95,11 +90,9 @@ const TemplatePreview = ({
         import('jspdf'),
       ]);
 
-      (window as unknown as Record<string, unknown>).html2canvas = html2canvas;
-
       const iframe = document.createElement('iframe');
       iframe.style.cssText =
-        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;height:${pageWidthPx * 4}px;border:none;visibility:hidden;`;
+        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;height:${pageHeightPx * 100}px;border:none;visibility:hidden;`;
       document.body.appendChild(iframe);
 
       const iframeDoc = iframe.contentDocument!;
@@ -107,10 +100,6 @@ const TemplatePreview = ({
       iframeDoc.write(`<!DOCTYPE html><html><head><style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{width:${pageWidthPx}px;background:#fff;font-family:system-ui,-apple-system,sans-serif}
-        .print-page{width:auto !important;padding:0 !important;margin:0 !important;margin-bottom:0 !important;box-shadow:none !important;border-radius:0 !important;overflow:visible !important}
-        tr{break-inside:avoid;page-break-inside:avoid}
-        table{break-inside:auto}
-        thead{display:table-header-group}
       </style></head><body>${content}</body></html>`);
       iframeDoc.close();
 
@@ -132,19 +121,43 @@ const TemplatePreview = ({
         format: [template.pageWidth, template.pageHeight],
       });
 
-      for (let i = 0; i < pageElements.length; i++) {
-        if (i > 0) {
-          pdf.addPage(
-            [template.pageWidth, template.pageHeight],
-            template.pageWidth > template.pageHeight ? 'l' : 'p',
-          );
-        }
+      const sliceHeight = pageHeightPx * 2;
+      let isFirstPage = true;
 
-        await pdf.html(pageElements[i], {
-          margin: marginArr,
-          autoPaging: 'text',
-          html2canvas: { scale: 2, useCORS: true, logging: false },
+      for (let i = 0; i < pageElements.length; i++) {
+        const el = pageElements[i];
+
+        const canvas = await html2canvas(el as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: pageWidthPx,
+          backgroundColor: '#ffffff',
         });
+
+        const numSlices = Math.ceil(canvas.height / sliceHeight);
+
+        for (let j = 0; j < numSlices; j++) {
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceHeight;
+          const ctx = sliceCanvas.getContext('2d')!;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+          ctx.drawImage(canvas, 0, -j * sliceHeight);
+
+          const imgData = sliceCanvas.toDataURL('image/jpeg', 0.95);
+
+          if (!isFirstPage) {
+            pdf.addPage(
+              [template.pageWidth, template.pageHeight],
+              template.pageWidth > template.pageHeight ? 'l' : 'p',
+            );
+          }
+          isFirstPage = false;
+
+          pdf.addImage(imgData, 'JPEG', 0, 0, template.pageWidth, template.pageHeight);
+        }
       }
 
       document.body.removeChild(iframe);
