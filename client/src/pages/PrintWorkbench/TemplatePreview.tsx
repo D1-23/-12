@@ -92,7 +92,7 @@ const TemplatePreview = ({
 
       const iframe = document.createElement('iframe');
       iframe.style.cssText =
-        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;height:5000px;border:none;visibility:hidden;`;
+        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;height:${pageHeightPx * 100}px;border:none;visibility:hidden;`;
       document.body.appendChild(iframe);
 
       const iframeDoc = iframe.contentDocument!;
@@ -121,6 +121,9 @@ const TemplatePreview = ({
         format: [template.pageWidth, template.pageHeight],
       });
 
+      const sliceHeight = pageHeightPx * 2;
+      let isFirstPage = true;
+
       for (let i = 0; i < pageElements.length; i++) {
         const el = pageElements[i];
 
@@ -129,16 +132,32 @@ const TemplatePreview = ({
           useCORS: true,
           logging: false,
           width: pageWidthPx,
-          height: pageHeightPx,
           backgroundColor: '#ffffff',
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const numSlices = Math.ceil(canvas.height / sliceHeight);
 
-        if (i > 0) {
-          pdf.addPage([template.pageWidth, template.pageHeight], template.pageWidth > template.pageHeight ? 'l' : 'p');
+        for (let j = 0; j < numSlices; j++) {
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceHeight;
+          const ctx = sliceCanvas.getContext('2d')!;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+          ctx.drawImage(canvas, 0, -j * sliceHeight);
+
+          const imgData = sliceCanvas.toDataURL('image/jpeg', 0.95);
+
+          if (!isFirstPage) {
+            pdf.addPage(
+              [template.pageWidth, template.pageHeight],
+              template.pageWidth > template.pageHeight ? 'l' : 'p',
+            );
+          }
+          isFirstPage = false;
+
+          pdf.addImage(imgData, 'JPEG', 0, 0, template.pageWidth, template.pageHeight);
         }
-        pdf.addImage(imgData, 'JPEG', 0, 0, template.pageWidth, template.pageHeight);
       }
 
       document.body.removeChild(iframe);
