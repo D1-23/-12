@@ -82,12 +82,7 @@ const TemplatePreview = ({
     if (!content) return;
 
     const pageWidthPx = Math.round(mmToPx(template.pageWidth));
-    const marginArr = [
-      template.margins.top,
-      template.margins.right,
-      template.margins.bottom,
-      template.margins.left,
-    ];
+    const pageHeightPx = Math.round(mmToPx(template.pageHeight));
 
     try {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -95,36 +90,21 @@ const TemplatePreview = ({
         import('jspdf'),
       ]);
 
-      (window as unknown as Record<string, unknown>).html2canvas = html2canvas;
-
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText =
-        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;height:${pageWidthPx * 4}px;border:none;visibility:hidden;`;
-      document.body.appendChild(iframe);
-
-      const iframeDoc = iframe.contentDocument!;
-      iframeDoc.open();
-      iframeDoc.write(`<!DOCTYPE html><html><head><style>
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{width:${pageWidthPx}px;background:#fff;font-family:system-ui,-apple-system,sans-serif}
-        .print-page{width:auto !important;padding:0 !important;margin:0 !important;margin-bottom:0 !important;box-shadow:none !important;border-radius:0 !important;overflow:visible !important}
-        tr{break-inside:avoid;page-break-inside:avoid}
-        table{break-inside:auto}
-        thead{display:table-header-group}
-      </style></head><body>${content}</body></html>`);
-      iframeDoc.close();
-
-      await new Promise<void>((resolve) => {
-        const check = () => {
-          if (iframeDoc.readyState === 'complete') resolve();
-          else setTimeout(check, 50);
-        };
-        check();
-      });
+      const container = document.createElement('div');
+      container.style.cssText =
+        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;background:#fff;font-family:system-ui,-apple-system,sans-serif;`;
+      container.innerHTML = content;
+      document.body.appendChild(container);
 
       const pageElements = Array.from(
-        iframeDoc.querySelectorAll('.print-page')
+        container.querySelectorAll('.print-page'),
       ) as HTMLElement[];
+
+      pageElements.forEach((el) => {
+        el.style.height = `${pageHeightPx}px`;
+        el.style.width = `${pageWidthPx}px`;
+        el.style.marginBottom = '0';
+      });
 
       const pdf = new jsPDF({
         orientation: template.pageWidth > template.pageHeight ? 'l' : 'p',
@@ -133,21 +113,26 @@ const TemplatePreview = ({
       });
 
       for (let i = 0; i < pageElements.length; i++) {
-        if (i > 0) {
-          pdf.addPage(
-            [template.pageWidth, template.pageHeight],
-            template.pageWidth > template.pageHeight ? 'l' : 'p',
-          );
-        }
-
-        await pdf.html(pageElements[i], {
-          margin: marginArr,
-          autoPaging: 'text',
-          html2canvas: { scale: 2, useCORS: true, logging: false },
+        const canvas = await html2canvas(pageElements[i], {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
         });
+
+        const imgData = canvas.toDataURL('image/png');
+
+        if (i > 0) pdf.addPage();
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,
+          0,
+          template.pageWidth,
+          template.pageHeight,
+        );
       }
 
-      document.body.removeChild(iframe);
+      document.body.removeChild(container);
 
       const dateStr = new Date().toISOString().slice(0, 10);
       pdf.save(`${template.name}_${dateStr}.pdf`);
