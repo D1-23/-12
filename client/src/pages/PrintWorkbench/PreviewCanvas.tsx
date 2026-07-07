@@ -200,7 +200,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       return (
         <div
           key={pageIdx}
-          className="print-page bg-card rounded-md shadow-sm"
+          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
             height: pageHeightPx,
@@ -219,6 +219,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               style={{
                 fontSize: 14,
                 fontWeight: 700,
+                lineHeight: '20px',
                 color: '#1F2329',
                 textAlign: 'left',
                 paddingBottom: 8,
@@ -231,7 +232,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             </div>
           )}
 
-          <div style={{ flex: '0 0 auto' }}>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
             {renderMergedTable(layout.rows)}
           </div>
 
@@ -244,6 +245,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               justifyContent: 'space-between',
               alignItems: 'flex-end',
               fontSize: 11,
+              lineHeight: '16px',
               color: '#86909C',
               flexShrink: 0,
             }}
