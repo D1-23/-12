@@ -97,21 +97,41 @@ const SignatureLayer = ({
         const heightPx = Math.round(mmToPx(area.heightMm));
         const leftPx = Math.round(mmToPx(area.xMm));
         const topPx = Math.round(mmToPx(area.yMm));
+        const isEmpty = !dataUrl;
+
+        const placeholderStyle: React.CSSProperties = isEmpty
+          ? {
+              width: '100%',
+              height: '100%',
+              border: editMode
+                ? '1px dashed #86909C'
+                : '1px dashed #E5E6EB',
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 10,
+              color: '#86909C',
+              pointerEvents: 'none',
+            }
+          : {};
 
         return (
           <div
             key={area.id}
             className={`signature-area ${editMode ? 'signature-area-edit' : ''}`}
+            data-sig-empty={isEmpty ? '' : undefined}
             style={{
               position: 'absolute',
               left: leftPx,
               top: topPx,
               width: widthPx,
               height: heightPx,
-              cursor: editMode ? 'move' : 'default',
+              cursor: editMode ? 'move' : 'pointer',
               zIndex: 10,
             }}
             onMouseDown={editMode ? (e) => handleMouseDown(e, area) : undefined}
+            onClick={!editMode && isEmpty ? () => onSign(recordIdx, area.id) : undefined}
           >
             {dataUrl ? (
               <img
@@ -125,24 +145,9 @@ const SignatureLayer = ({
                 }}
               />
             ) : (
-              editMode && (
-                <div
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: '1px dashed #86909C',
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 10,
-                    color: '#86909C',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  点击签名
-                </div>
-              )
+              <div style={placeholderStyle}>
+                {editMode && '点击签名'}
+              </div>
             )}
           </div>
         );
