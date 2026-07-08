@@ -357,7 +357,7 @@ const TemplateConfig = ({
                     const newArea: SignatureArea = {
                       id: generateId(),
                       xMm: areas.length * 65,
-                      yMm: draft.pageHeight - draft.margins.bottom - 30,
+                      yMm: 150,
                       widthMm: 60,
                       heightMm: 25,
                     };

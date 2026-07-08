@@ -58,7 +58,13 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const contentRef = useRef<HTMLDivElement>(null);
 
     useImperativeHandle(ref, () => ({
-      getContent: () => contentRef.current?.innerHTML ?? '',
+      getContent: () => {
+        const node = contentRef.current;
+        if (!node) return '';
+        const clone = node.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll('[data-sig-empty]').forEach((el) => el.remove());
+        return clone.innerHTML;
+      },
       getPageElements: () => {
         const container = contentRef.current;
         if (!container) return [];
