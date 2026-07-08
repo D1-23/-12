@@ -105,8 +105,11 @@ const SignatureLayer = ({
               height: '100%',
               border: editMode
                 ? '1px dashed #86909C'
-                : '1px dashed #E5E6EB',
+                : '1px dashed #BFBFBF',
               borderRadius: 2,
+              background: editMode
+                ? 'rgba(0,0,0,0.05)'
+                : 'rgba(0,0,0,0.03)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
