@@ -11,6 +11,14 @@ export interface PageMargins {
   left: number;
 }
 
+export interface SignatureArea {
+  id: string;
+  xMm: number;
+  yMm: number;
+  widthMm: number;
+  heightMm: number;
+}
+
 export interface PrintTemplate {
   id: string;
   name: string;
@@ -26,6 +34,7 @@ export interface PrintTemplate {
   pageWidth: number;
   pageHeight: number;
   margins: PageMargins;
+  signatureAreas?: SignatureArea[];
 }
 
 export const MARGIN_LABELS: Record<MarginOption, string> = {
@@ -89,7 +98,10 @@ export function mmToPx(mm: number): number {
 }
 
 export function migrateTemplate(t: PrintTemplate): PrintTemplate {
-  if (t.paperSize && t.margins) return t;
+  if (t.paperSize && t.margins) {
+    if (!t.signatureAreas) return { ...t, signatureAreas: [] };
+    return t;
+  }
   const marginVal = MARGIN_VALUES[t.margin] || 25;
   return {
     ...t,

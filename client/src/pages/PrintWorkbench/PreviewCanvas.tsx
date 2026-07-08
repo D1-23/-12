@@ -1,8 +1,9 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
-import type { TemplateType, MarginOption, FontSizeOption, PageMargins } from '@/types/template';
+import type { TemplateType, MarginOption, FontSizeOption, PageMargins, SignatureArea } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
 import { buildMergedRows, type MergedRow } from './layout-engine';
+import SignatureLayer from './SignatureLayer';
 
 export interface PreviewCanvasHandle {
   getContent: () => string;
@@ -21,6 +22,11 @@ interface PreviewCanvasProps {
   margins: PageMargins;
   fieldTypes: Record<string, number>;
   tableName: string;
+  signatureAreas: SignatureArea[];
+  signatureData: Record<string, string>;
+  signatureEditMode: boolean;
+  onSign: (recordIdx: number, areaId: string) => void;
+  onMoveSig: (areaId: string, xMm: number, yMm: number) => void;
 }
 
 function truncateText(text: string, maxLen: number): string {
@@ -37,9 +43,15 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       mode,
       titleField,
       pageWidth,
+      pageHeight,
       margins,
       fieldTypes,
       tableName,
+      signatureAreas,
+      signatureData,
+      signatureEditMode,
+      onSign,
+      onMoveSig,
     },
     ref,
   ) => {
@@ -171,6 +183,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             paddingLeft: marginsPx.left,
             fontSize: fs,
             marginBottom: 30,
+            position: 'relative',
           }}
         >
           <div
@@ -189,6 +202,20 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           </div>
 
           {renderMergedTable(rows)}
+
+          {signatureAreas.length > 0 && (
+            <SignatureLayer
+              areas={signatureAreas}
+              signatureData={signatureData}
+              recordIdx={recordIdx}
+              contentWidthMm={contentWidthMm}
+              pageHeightMm={pageHeight}
+              zoom={0.39}
+              editMode={signatureEditMode}
+              onSign={onSign}
+              onMove={onMoveSig}
+            />
+          )}
 
           <div
             style={{

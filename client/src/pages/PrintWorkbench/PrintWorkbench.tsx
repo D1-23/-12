@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FileText } from 'lucide-react';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import type { PrintTemplate, TemplateType } from '@/types/template';
+import type { PrintTemplate, TemplateType, SignatureArea } from '@/types/template';
 import { loadTemplates, saveTemplates, migrateTemplate, DEFAULT_PAGE_MARGINS } from '@/types/template';
 import { useBitableData } from '@/hooks/useBitableData';
 import TemplateList from './TemplateList';
@@ -44,6 +44,7 @@ function createDefaultTemplates(allFields: string[]): PrintTemplate[] {
       pageWidth: 210,
       pageHeight: 297,
       margins: { ...DEFAULT_PAGE_MARGINS },
+      signatureAreas: [],
     },
     {
       id: generateId(),
@@ -60,6 +61,7 @@ function createDefaultTemplates(allFields: string[]): PrintTemplate[] {
       pageWidth: 210,
       pageHeight: 297,
       margins: { ...DEFAULT_PAGE_MARGINS },
+      signatureAreas: [],
     },
   ];
 }
@@ -135,6 +137,7 @@ const PrintWorkbench = () => {
         pageWidth: 210,
         pageHeight: 297,
         margins: { ...DEFAULT_PAGE_MARGINS },
+        signatureAreas: [],
       };
       const updated = [...templates, newTemplate];
       setTemplates(updated);
@@ -198,6 +201,17 @@ const PrintWorkbench = () => {
     [templates]
   );
 
+  const handleUpdateSignatures = useCallback(
+    (templateId: string, areas: SignatureArea[]) => {
+      const newTemplates = templates.map((t) =>
+        t.id === templateId ? { ...t, signatureAreas: areas } : t
+      );
+      setTemplates(newTemplates);
+      saveTemplates(newTemplates);
+    },
+    [templates]
+  );
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -245,6 +259,7 @@ const PrintWorkbench = () => {
         onBack={() => setView('list')}
         onEdit={() => setView('config')}
         onUpdateFields={(fields) => handleUpdateFields(activeTemplate.id, fields)}
+        onUpdateSignatures={(areas) => handleUpdateSignatures(activeTemplate.id, areas)}
       />
     );
   }

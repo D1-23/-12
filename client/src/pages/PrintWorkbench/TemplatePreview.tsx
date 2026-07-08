@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal, X, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { logger } from '@lark-apaas/client-toolkit/logger';
@@ -7,6 +7,9 @@ import type { PrintTemplate } from '@/types/template';
 import { TEMPLATE_TYPE_LABELS, mmToPx } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
 import FieldSettingsDialog from './FieldSettingsDialog';
+import SignaturePad from './SignaturePad';
+import type { SignatureArea } from '@/types/template';
+import { generateId } from '@/types/template';
 
 interface RecordWithId {
   id: string;
@@ -23,6 +26,7 @@ interface TemplatePreviewProps {
   onBack: () => void;
   onEdit: () => void;
   onUpdateFields?: (fields: string[]) => void;
+  onUpdateSignatures?: (areas: SignatureArea[]) => void;
 }
 
 const TemplatePreview = ({
@@ -35,11 +39,15 @@ const TemplatePreview = ({
   onBack,
   onEdit,
   onUpdateFields,
+  onUpdateSignatures,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
   const [batchMode, setBatchMode] = useState(false);
   const [showFieldDialog, setShowFieldDialog] = useState(false);
   const [batchDismissed, setBatchDismissed] = useState(false);
+  const [signatureData, setSignatureData] = useState<Record<string, string>>({});
+  const [signingArea, setSigningArea] = useState<{ recordIdx: number; areaId: string } | null>(null);
+  const [sigEditMode, setSigEditMode] = useState(false);
 
   const hasMultipleSelected = selectedRecords.length > 1;
   const showBatchPrompt = hasMultipleSelected && !batchMode && !batchDismissed;
@@ -66,6 +74,27 @@ const TemplatePreview = ({
     setBatchMode(false);
     setBatchDismissed(false);
   }, []);
+
+  const signatureAreas = template.signatureAreas ?? [];
+
+  const handleSign = useCallback((recordIdx: number, areaId: string) => {
+    setSigningArea({ recordIdx, areaId });
+  }, []);
+
+  const handleSignConfirm = useCallback((dataUrl: string) => {
+    if (!signingArea) return;
+    const key = `${signingArea.recordIdx}_${signingArea.areaId}`;
+    setSignatureData((prev) => ({ ...prev, [key]: dataUrl }));
+    setSigningArea(null);
+  }, [signingArea]);
+
+  const handleMoveSig = useCallback((areaId: string, xMm: number, yMm: number) => {
+    if (!onUpdateSignatures) return;
+    const updated = signatureAreas.map((a) =>
+      a.id === areaId ? { ...a, xMm, yMm } : a,
+    );
+    onUpdateSignatures(updated);
+  }, [onUpdateSignatures, signatureAreas]);
 
   const handlePrint = useCallback(() => {
     const content = previewRef.current?.getContent();
@@ -213,6 +242,11 @@ const TemplatePreview = ({
           margins={template.margins}
           fieldTypes={fieldTypes}
           tableName={tableName}
+          signatureAreas={signatureAreas}
+          signatureData={signatureData}
+          signatureEditMode={sigEditMode}
+          onSign={handleSign}
+          onMoveSig={handleMoveSig}
         />
       </div>
 
@@ -241,6 +275,17 @@ const TemplatePreview = ({
           >
             <X className="size-3.5" />
             退出批量
+          </Button>
+        )}
+        {signatureAreas.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-7 px-2 text-xs gap-1 ${sigEditMode ? 'text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setSigEditMode((v) => !v)}
+          >
+            <PenLine className="size-3.5" />
+            {sigEditMode ? '完成' : '签名'}
           </Button>
         )}
         <Button
@@ -273,6 +318,12 @@ const TemplatePreview = ({
         allFields={allFields}
         enabledFields={template.fields}
         onConfirm={(fields) => onUpdateFields?.(fields)}
+      />
+
+      <SignaturePad
+        open={signingArea !== null}
+        onClose={() => setSigningArea(null)}
+        onConfirm={handleSignConfirm}
       />
     </div>
   );
