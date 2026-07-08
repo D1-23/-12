@@ -62,7 +62,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         const node = contentRef.current;
         if (!node) return '';
         const clone = node.cloneNode(true) as HTMLElement;
-        clone.querySelectorAll('[data-sig-empty]').forEach((el) => el.remove());
+        clone.querySelectorAll('[data-sig-empty], [data-sig-outside]').forEach((el) => el.remove());
         return clone.innerHTML;
       },
       getPageElements: () => {
@@ -214,7 +214,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               areas={signatureAreas}
               signatureData={signatureData}
               recordIdx={recordIdx}
-              contentWidthMm={contentWidthMm}
+              pageWidthMm={pageWidth}
               pageHeightMm={pageHeight}
               zoom={0.39}
               editMode={signatureEditMode}

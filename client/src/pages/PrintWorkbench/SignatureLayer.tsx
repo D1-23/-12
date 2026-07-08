@@ -6,7 +6,7 @@ interface SignatureLayerProps {
   areas: SignatureArea[];
   signatureData: Record<string, string>;
   recordIdx: number;
-  contentWidthMm: number;
+  pageWidthMm: number;
   pageHeightMm: number;
   zoom: number;
   editMode: boolean;
@@ -21,7 +21,7 @@ const SignatureLayer = ({
   areas,
   signatureData,
   recordIdx,
-  contentWidthMm,
+  pageWidthMm,
   pageHeightMm,
   zoom,
   editMode,
@@ -64,8 +64,8 @@ const SignatureLayer = ({
         let newX = ds.origXMm + pxToMm(dxPx);
         let newY = ds.origYMm + pxToMm(dyPx);
 
-        newX = Math.max(0, Math.min(newX, contentWidthMm - area.widthMm));
-        newY = Math.max(0, Math.min(newY, pageHeightMm - area.heightMm));
+        newX = Math.max(-area.widthMm + 10, Math.min(newX, pageWidthMm - 10));
+        newY = Math.max(-area.heightMm + 10, Math.min(newY, pageHeightMm - 10));
 
         onMove(ds.areaId, newX, newY);
       };
@@ -83,7 +83,7 @@ const SignatureLayer = ({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [zoom, contentWidthMm, pageHeightMm, onMove, onSign, recordIdx],
+    [zoom, pageWidthMm, pageHeightMm, onMove, onSign, recordIdx],
   );
 
   if (areas.length === 0) return null;
@@ -98,6 +98,9 @@ const SignatureLayer = ({
         const leftPx = Math.round(mmToPx(area.xMm));
         const topPx = Math.round(mmToPx(area.yMm));
         const isEmpty = !dataUrl;
+        const isOutside =
+          area.xMm + area.widthMm < 0 || area.xMm > pageWidthMm ||
+          area.yMm + area.heightMm < 0 || area.yMm > pageHeightMm;
 
         const placeholderStyle: React.CSSProperties = isEmpty
           ? {
@@ -124,6 +127,7 @@ const SignatureLayer = ({
             key={area.id}
             className={`signature-area ${editMode ? 'signature-area-edit' : ''}`}
             data-sig-empty={isEmpty ? '' : undefined}
+            data-sig-outside={isOutside ? '' : undefined}
             style={{
               position: 'absolute',
               left: leftPx,
