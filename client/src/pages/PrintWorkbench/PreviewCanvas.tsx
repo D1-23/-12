@@ -97,6 +97,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     }));
 
     const pageWidthPx = Math.round(mmToPx(pageWidth));
+    const pageHeightPx = Math.round(mmToPx(pageHeight));
     const marginsPx = useMemo<PageMargins>(
       () => ({
         top: Math.round(mmToPx(margins.top)),
@@ -203,6 +204,8 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           className="print-page bg-card rounded-md shadow-sm overflow-hidden"
           style={{
             width: pageWidthPx,
+            height: pageHeightPx,
+            boxSizing: 'border-box',
             paddingTop: marginsPx.top,
             paddingRight: marginsPx.right,
             paddingBottom: marginsPx.bottom,
