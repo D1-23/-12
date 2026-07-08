@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { SignatureArea } from '@/types/template';
 import { mmToPx } from '@/types/template';
 
@@ -86,6 +86,17 @@ const SignatureLayer = ({
     [zoom, pageWidthMm, pageHeightMm, onMove, onSign, recordIdx],
   );
 
+  const prevEditModeRef = useRef(false);
+
+  useEffect(() => {
+    if (editMode && !prevEditModeRef.current && areas.length > 0) {
+      const firstArea = areas[0];
+      const element = document.querySelector(`[data-sig-area="${firstArea.id}"]`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    prevEditModeRef.current = editMode;
+  }, [editMode, areas]);
+
   if (areas.length === 0) return null;
 
   return (
@@ -126,6 +137,7 @@ const SignatureLayer = ({
           <div
             key={area.id}
             className={`signature-area ${editMode ? 'signature-area-edit' : ''}`}
+            data-sig-area={area.id}
             data-sig-empty={isEmpty ? '' : undefined}
             data-sig-outside={isOutside ? '' : undefined}
             style={{
