@@ -29,11 +29,6 @@ interface PreviewCanvasProps {
   onMoveSig: (areaId: string, xMm: number, yMm: number) => void;
 }
 
-function truncateText(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen) + '...';
-}
-
 const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
   (
     {
@@ -88,7 +83,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const contentWidthMm = pageWidth - margins.left - margins.right;
 
     const recordMergedRows = useMemo<MergedRow[][]>(() => {
-      if (mode !== 'record') return [];
       return records.map((record) =>
         buildMergedRows({
           fields: enabledFields,
@@ -247,149 +241,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       );
     };
 
-    const renderView = () => {
-      const contentW = pageWidthPx - marginsPx.left - marginsPx.right;
-      const maxCellChars = Math.floor(
-        (contentW - enabledFields.length * 8) / (enabledFields.length * fs * 0.55),
-      );
-      const colWidth = contentW / enabledFields.length;
-
-      const thStyle: React.CSSProperties = {
-        textAlign: 'left',
-        fontWeight: 600,
-        padding: '3px 6px',
-        border: '1px solid #333333',
-        background: '#FFFFFF',
-        color: '#000000',
-        maxWidth: `${colWidth}px`,
-        fontSize: 11,
-        lineHeight: '16px',
-        verticalAlign: 'top',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-      };
-
-      const tdStyle: React.CSSProperties = {
-        padding: '3px 6px',
-        border: '1px solid #333333',
-        background: '#FFFFFF',
-        color: '#1F2329',
-        maxWidth: `${colWidth}px`,
-        fontSize: 11,
-        lineHeight: '16px',
-        verticalAlign: 'top',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      };
-
-      const title = titleField
-        ? (formatFieldValue(records[0]?.[titleField]) || '未命名记录')
-        : null;
-      const printTime = formatPrintTime();
-      const totalRecords = records.length;
-
-      return (
-        <div
-          className="print-page bg-card rounded-md shadow-sm overflow-hidden"
-          style={{
-            width: pageWidthPx,
-            paddingTop: marginsPx.top,
-            paddingRight: marginsPx.right,
-            paddingBottom: marginsPx.bottom,
-            paddingLeft: marginsPx.left,
-            fontSize: fs,
-            marginBottom: 30,
-            position: 'relative',
-          }}
-        >
-          {title && (
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                lineHeight: '18px',
-                color: '#1F2329',
-                textAlign: 'left',
-                paddingBottom: 4,
-                marginBottom: 2,
-                borderBottom: '1px solid #e5e5e5',
-              }}
-            >
-              {title}
-            </div>
-          )}
-
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                {enabledFields.map((field) => (
-                  <th key={field} style={thStyle}>
-                    {field}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((record, rowIdx) => (
-                <tr key={rowIdx}>
-                  {enabledFields.map((field) => (
-                    <td
-                      key={field}
-                      style={tdStyle}
-                      title={formatFieldValue(record[field])}
-                    >
-                      {truncateText(
-                        formatFieldValue(record[field]),
-                        Math.max(maxCellChars, 8),
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {signatureAreas.length > 0 && (
-            <SignatureLayer
-              areas={signatureAreas}
-              signatureData={signatureData}
-              recordIdx={0}
-              pageWidthMm={pageWidth}
-              pageHeightMm={pageHeight}
-              zoom={0.39}
-              editMode={signatureEditMode}
-              onSign={onSign}
-              onMove={onMoveSig}
-            />
-          )}
-
-          <div
-            style={{
-              marginTop: 4,
-              paddingTop: 4,
-              borderTop: '1px solid #E5E6EB',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-              fontSize: 11,
-              lineHeight: '14px',
-              color: '#86909C',
-            }}
-          >
-            <div>
-              {tableName && <div>Table Name: {tableName}</div>}
-              <div>Print Time: {printTime}</div>
-            </div>
-            <span>
-              共 {totalRecords} 条
-            </span>
-          </div>
-        </div>
-      );
-    };
-
     return (
       <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background py-3">
         <div style={{ width: scaledWidth, margin: '0 auto' }}>
@@ -401,9 +252,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               zoom: 0.39,
             }}
           >
-            {mode === 'record'
-              ? recordMergedRows.map((rows, idx) => renderRecord(rows, idx))
-              : renderView()}
+            {recordMergedRows.map((rows, idx) => renderRecord(rows, idx))}
           </div>
         </div>
       </div>
