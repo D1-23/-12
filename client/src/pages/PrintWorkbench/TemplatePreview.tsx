@@ -224,7 +224,7 @@ const TemplatePreview = ({
         </div>
       )}
 
-      <div className="flex-1 relative overflow-auto">
+      <div className="flex-1 relative overflow-hidden flex flex-col">
         <PreviewCanvas
           ref={previewRef}
           records={displayRecords}

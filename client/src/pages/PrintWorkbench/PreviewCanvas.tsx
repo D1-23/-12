@@ -1,4 +1,4 @@
-import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useMemo, useRef, useImperativeHandle, forwardRef, useCallback, useState } from 'react';
 import type { MarginOption, FontSizeOption, PageMargins, SignatureArea } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
@@ -49,6 +49,37 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     ref,
   ) => {
     const contentRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const dragState = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      if ((e.target as HTMLElement).closest('button, a, [role="button"], [data-sig-layer]')) return;
+      dragState.current = {
+        startX: e.pageX,
+        startY: e.pageY,
+        scrollLeft: el.scrollLeft,
+        scrollTop: el.scrollTop,
+      };
+      setIsDragging(true);
+    }, []);
+
+    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+      if (!dragState.current) return;
+      const el = scrollRef.current;
+      if (!el) return;
+      const dx = e.pageX - dragState.current.startX;
+      const dy = e.pageY - dragState.current.startY;
+      el.scrollLeft = dragState.current.scrollLeft - dx;
+      el.scrollTop = dragState.current.scrollTop - dy;
+    }, []);
+
+    const handleStopDrag = useCallback(() => {
+      dragState.current = null;
+      setIsDragging(false);
+    }, []);
 
     useImperativeHandle(ref, () => ({
       getContent: () => {
@@ -240,7 +271,15 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     };
 
     return (
-      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background py-3">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-auto bg-background py-3 select-none"
+        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleStopDrag}
+        onMouseLeave={handleStopDrag}
+      >
         <div style={{ width: scaledWidth, margin: '0 auto' }}>
           <div
             ref={contentRef}
