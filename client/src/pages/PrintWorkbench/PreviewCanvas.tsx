@@ -257,24 +257,38 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       const thStyle: React.CSSProperties = {
         textAlign: 'left',
         fontWeight: 600,
-        padding: '6px 4px',
-        borderBottom: '2px solid rgba(31,35,41,0.2)',
-        color: '#86909C',
-        whiteSpace: 'nowrap',
+        padding: '3px 6px',
+        border: '1px solid #333333',
+        background: '#FFFFFF',
+        color: '#000000',
         maxWidth: `${colWidth}px`,
-        fontSize: fs - 1,
+        fontSize: 11,
+        lineHeight: '16px',
+        verticalAlign: 'top',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
       };
 
       const tdStyle: React.CSSProperties = {
-        padding: '4px 4px',
-        borderBottom: '1px solid rgba(229,230,235,0.4)',
+        padding: '3px 6px',
+        border: '1px solid #333333',
+        background: '#FFFFFF',
         color: '#1F2329',
         maxWidth: `${colWidth}px`,
-        fontSize: fs - 1,
+        fontSize: 11,
+        lineHeight: '16px',
+        verticalAlign: 'top',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
       };
+
+      const title = titleField
+        ? (formatFieldValue(records[0]?.[titleField]) || '未命名记录')
+        : null;
+      const printTime = formatPrintTime();
+      const totalRecords = records.length;
 
       return (
         <div
@@ -287,9 +301,27 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             paddingLeft: marginsPx.left,
             fontSize: fs,
             marginBottom: 30,
+            position: 'relative',
           }}
         >
-          <table style={{ ...tableStyle, fontSize: fs - 1 }}>
+          {title && (
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                lineHeight: '18px',
+                color: '#1F2329',
+                textAlign: 'left',
+                paddingBottom: 4,
+                marginBottom: 2,
+                borderBottom: '1px solid #e5e5e5',
+              }}
+            >
+              {title}
+            </div>
+          )}
+
+          <table style={tableStyle}>
             <thead>
               <tr>
                 {enabledFields.map((field) => (
@@ -301,10 +333,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             </thead>
             <tbody>
               {records.map((record, rowIdx) => (
-                <tr
-                  key={rowIdx}
-                  style={rowIdx % 2 === 0 ? { background: 'rgba(240,244,248,0.5)' } : undefined}
-                >
+                <tr key={rowIdx}>
                   {enabledFields.map((field) => (
                     <td
                       key={field}
@@ -321,6 +350,42 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               ))}
             </tbody>
           </table>
+
+          {signatureAreas.length > 0 && (
+            <SignatureLayer
+              areas={signatureAreas}
+              signatureData={signatureData}
+              recordIdx={0}
+              pageWidthMm={pageWidth}
+              pageHeightMm={pageHeight}
+              zoom={0.39}
+              editMode={signatureEditMode}
+              onSign={onSign}
+              onMove={onMoveSig}
+            />
+          )}
+
+          <div
+            style={{
+              marginTop: 4,
+              paddingTop: 4,
+              borderTop: '1px solid #E5E6EB',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              fontSize: 11,
+              lineHeight: '14px',
+              color: '#86909C',
+            }}
+          >
+            <div>
+              {tableName && <div>Table Name: {tableName}</div>}
+              <div>Print Time: {printTime}</div>
+            </div>
+            <span>
+              共 {totalRecords} 条
+            </span>
+          </div>
         </div>
       );
     };
