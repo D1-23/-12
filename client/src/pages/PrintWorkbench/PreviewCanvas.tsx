@@ -167,12 +167,9 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     const renderRecord = (rows: MergedRow[], recordIdx: number) => {
       const record = records[recordIdx];
-      const title =
-        formatFieldValue(record[titleField]) ||
-        formatFieldValue(record['标题']) ||
-        formatFieldValue(record['客户名称']) ||
-        formatFieldValue(record['零件代码']) ||
-        '未命名记录';
+      const title = titleField
+        ? (formatFieldValue(record[titleField]) || '未命名记录')
+        : null;
 
       const printTime = formatPrintTime();
       const totalRecords = records.length;
@@ -192,20 +189,22 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             position: 'relative',
           }}
         >
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              lineHeight: '18px',
-              color: '#1F2329',
-              textAlign: 'left',
-              paddingBottom: 4,
-              marginBottom: 2,
-              borderBottom: '1px solid #e5e5e5',
-            }}
-          >
-            {title}
-          </div>
+          {title && (
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                lineHeight: '18px',
+                color: '#1F2329',
+                textAlign: 'left',
+                paddingBottom: 4,
+                marginBottom: 2,
+                borderBottom: '1px solid #e5e5e5',
+              }}
+            >
+              {title}
+            </div>
+          )}
 
           {renderMergedTable(rows)}
 

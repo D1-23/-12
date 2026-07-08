@@ -8,6 +8,7 @@ import {
   Square,
   Plus,
   Minus,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -396,23 +397,37 @@ const TemplateConfig = ({
             <label className="text-xs text-muted-foreground mb-1 block">
               标题字段
             </label>
-            <Select
-              value={draft.titleField}
-              onValueChange={(v) =>
-                setDraft((prev) => ({ ...prev, titleField: v }))
-              }
-            >
-              <SelectTrigger size="sm" className="h-8 text-xs">
-                <SelectValue placeholder="选择标题字段" />
-              </SelectTrigger>
-              <SelectContent>
-                {draft.fields.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {f}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select
+                value={draft.titleField}
+                onValueChange={(v) =>
+                  setDraft((prev) => ({ ...prev, titleField: v }))
+                }
+              >
+                <SelectTrigger size="sm" className="h-8 text-xs flex-1">
+                  <SelectValue placeholder="选择标题字段" />
+                </SelectTrigger>
+                <SelectContent>
+                  {draft.fields.map((f) => (
+                    <SelectItem key={f} value={f}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {draft.titleField && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    setDraft((prev) => ({ ...prev, titleField: '' }))
+                  }
+                >
+                  <X className="size-4" />
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
