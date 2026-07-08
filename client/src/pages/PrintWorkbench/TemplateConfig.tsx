@@ -20,11 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { PrintTemplate, MarginOption, FontSizeOption, TemplateType, PaperSize, Orientation, SignatureArea } from '@/types/template';
+import type { PrintTemplate, MarginOption, FontSizeOption, PaperSize, Orientation, PageMargins, SignatureArea } from '@/types/template';
 import {
   MARGIN_LABELS,
   FONT_SIZE_LABELS,
-  TEMPLATE_TYPE_LABELS,
   PAPER_SIZE_LABELS,
   ORIENTATION_LABELS,
   PAPER_SIZES,
@@ -128,26 +127,6 @@ const TemplateConfig = ({
             value={draft.name}
             onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
           />
-        </div>
-
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">
-            模板类型
-          </label>
-          <Select
-            value={draft.type}
-            onValueChange={(v) =>
-              setDraft((prev) => ({ ...prev, type: v as TemplateType }))
-            }
-          >
-            <SelectTrigger size="sm" className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="record">记录模板</SelectItem>
-              <SelectItem value="view">视图模板</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <div>
@@ -341,11 +320,10 @@ const TemplateConfig = ({
           </div>
         </div>
 
-        {draft.type === 'record' && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs text-muted-foreground">
-                签名区域 ({(draft.signatureAreas ?? []).length})
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs text-muted-foreground">
+              签名区域 ({(draft.signatureAreas ?? []).length})
               </label>
               <div className="flex gap-1">
                 <Button
@@ -390,7 +368,6 @@ const TemplateConfig = ({
               在预览页面中可拖拽签名位置并手写签名
             </div>
           </div>
-        )}
 
         {draft.fields.length > 0 && (
           <div>

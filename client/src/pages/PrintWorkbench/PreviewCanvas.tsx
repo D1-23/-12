@@ -1,5 +1,5 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
-import type { TemplateType, MarginOption, FontSizeOption, PageMargins, SignatureArea } from '@/types/template';
+import type { MarginOption, FontSizeOption, PageMargins, SignatureArea } from '@/types/template';
 import { FONT_SIZES, mmToPx } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
 import { buildMergedRows, type MergedRow } from './layout-engine';
@@ -15,7 +15,6 @@ interface PreviewCanvasProps {
   enabledFields: string[];
   margin: MarginOption;
   fontSize: FontSizeOption;
-  mode: TemplateType;
   titleField: string;
   pageWidth: number;
   pageHeight: number;
@@ -35,7 +34,6 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       records,
       enabledFields,
       fontSize,
-      mode,
       titleField,
       pageWidth,
       pageHeight,
@@ -92,7 +90,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           fontSize: fs,
         }),
       );
-    }, [mode, records, enabledFields, fieldTypes, contentWidthMm, fs]);
+    }, [records, enabledFields, fieldTypes, contentWidthMm, fs]);
 
     const labelTdStyle: React.CSSProperties = {
       width: LABEL_WIDTH,

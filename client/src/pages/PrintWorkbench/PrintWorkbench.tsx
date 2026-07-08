@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FileText } from 'lucide-react';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import type { PrintTemplate, TemplateType, SignatureArea } from '@/types/template';
+import type { PrintTemplate, SignatureArea } from '@/types/template';
 import { loadTemplates, saveTemplates, migrateTemplate, DEFAULT_PAGE_MARGINS } from '@/types/template';
 import { useBitableData } from '@/hooks/useBitableData';
 import TemplateList from './TemplateList';
@@ -46,23 +46,6 @@ function createDefaultTemplates(allFields: string[]): PrintTemplate[] {
       margins: { ...DEFAULT_PAGE_MARGINS },
       signatureAreas: [],
     },
-    {
-      id: generateId(),
-      name: '列表总览',
-      type: 'view',
-      fields: allFields.slice(0, Math.min(5, allFields.length)),
-      margin: 'narrow',
-      fontSize: 'small',
-      titleField: allFields[0] || '',
-      pinned: false,
-      createdAt: now - 1,
-      paperSize: 'A4',
-      orientation: 'portrait',
-      pageWidth: 210,
-      pageHeight: 297,
-      margins: { ...DEFAULT_PAGE_MARGINS },
-      signatureAreas: [],
-    },
   ];
 }
 
@@ -85,7 +68,9 @@ const PrintWorkbench = () => {
     const initTemplates = () => {
       if (loading) return;
       const fields = allFields.length > 0 ? allFields : extractFieldsFromRecords(allRecords);
-      const stored = loadTemplates().map(migrateTemplate);
+      const stored = loadTemplates().map(migrateTemplate).map((t) =>
+        t.type === 'record' ? t : { ...t, type: 'record' as const }
+      );
       if (stored.length > 0) {
         setTemplates(stored);
         if (stored.some((t) => !t.paperSize)) {
@@ -121,11 +106,11 @@ const PrintWorkbench = () => {
   }, []);
 
   const handleCreateTemplate = useCallback(
-    (name: string, type: TemplateType) => {
+    (name: string) => {
       const newTemplate: PrintTemplate = {
         id: generateId(),
         name,
-        type,
+        type: 'record',
         fields: [...allFields],
         margin: 'standard',
         fontSize: 'medium',
