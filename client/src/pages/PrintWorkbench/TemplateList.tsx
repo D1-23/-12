@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, FileText, Table2, Trash2, Copy, Eye } from 'lucide-react';
+import { Plus, Search, FileText, Trash2, Copy, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -10,21 +9,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import type { PrintTemplate, TemplateType } from '@/types/template';
-import { TEMPLATE_TYPE_LABELS } from '@/types/template';
+import type { PrintTemplate } from '@/types/template';
 
 interface TemplateListProps {
   templates: PrintTemplate[];
   activeTemplateId: string | null;
   onSelect: (template: PrintTemplate) => void;
-  onCreate: (name: string, type: TemplateType) => void;
+  onCreate: (name: string) => void;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
 }
@@ -40,7 +31,6 @@ const TemplateList = ({
   const [search, setSearch] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<TemplateType>('record');
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -55,14 +45,10 @@ const TemplateList = ({
     });
   }, [templates, search]);
 
-  const recordTemplates = filtered.filter((t) => t.type === 'record');
-  const viewTemplates = filtered.filter((t) => t.type === 'view');
-
   const handleCreate = () => {
     if (!newName.trim()) return;
-    onCreate(newName.trim(), newType);
+    onCreate(newName.trim());
     setNewName('');
-    setNewType('record');
     setShowCreateDialog(false);
   };
 
@@ -81,11 +67,7 @@ const TemplateList = ({
         onClick={() => onSelect(template)}
       >
         <div className="shrink-0">
-          {template.type === 'record' ? (
-            <FileText className="size-4 text-primary" />
-          ) : (
-            <Table2 className="size-4 text-primary" />
-          )}
+          <FileText className="size-4 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-foreground truncate">
@@ -138,22 +120,6 @@ const TemplateList = ({
     );
   };
 
-  const renderGroup = (title: string, items: PrintTemplate[]) => (
-    <div className="mb-3">
-      <div className="text-xs font-medium text-muted-foreground px-1 mb-1.5 uppercase tracking-wide">
-        {title} ({items.length})
-      </div>
-      <div className="space-y-1">
-        {items.map(renderCard)}
-        {items.length === 0 && (
-          <div className="text-xs text-muted-foreground px-3 py-2 italic">
-            暂无{title}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 pt-3 pb-2 space-y-2 shrink-0">
@@ -181,8 +147,14 @@ const TemplateList = ({
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-3">
-        {renderGroup('记录模板', recordTemplates)}
-        {renderGroup('视图模板', viewTemplates)}
+        <div className="space-y-1">
+          {filtered.map(renderCard)}
+          {filtered.length === 0 && (
+            <div className="text-xs text-muted-foreground px-3 py-2 italic">
+              暂无模板
+            </div>
+          )}
+        </div>
       </div>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -202,23 +174,6 @@ const TemplateList = ({
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
               />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">
-                模板类型
-              </label>
-              <Select
-                value={newType}
-                onValueChange={(v) => setNewType(v as TemplateType)}
-              >
-                <SelectTrigger size="sm" className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="record">记录模板</SelectItem>
-                  <SelectItem value="view">视图模板</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <DialogFooter>

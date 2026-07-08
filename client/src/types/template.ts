@@ -1,4 +1,4 @@
-export type TemplateType = 'record' | 'view';
+export type TemplateType = 'record';
 export type MarginOption = 'narrow' | 'standard' | 'wide';
 export type FontSizeOption = 'small' | 'medium' | 'large';
 export type PaperSize = 'A4' | 'A3' | 'A5' | 'Letter' | 'Custom';
@@ -51,7 +51,6 @@ export const FONT_SIZE_LABELS: Record<FontSizeOption, string> = {
 
 export const TEMPLATE_TYPE_LABELS: Record<TemplateType, string> = {
   record: '记录模板',
-  view: '视图模板',
 };
 
 export const MARGIN_VALUES: Record<MarginOption, number> = {
@@ -98,9 +97,10 @@ export function mmToPx(mm: number): number {
 }
 
 export function migrateTemplate(t: PrintTemplate): PrintTemplate {
-  if (t.paperSize && t.margins) {
-    if (!t.signatureAreas) return { ...t, signatureAreas: [] };
-    return t;
+  const base = t.type === 'record' ? t : { ...t, type: 'record' as TemplateType };
+  if (base.paperSize && base.margins) {
+    if (!base.signatureAreas) return { ...base, signatureAreas: [] };
+    return base;
   }
   const marginVal = MARGIN_VALUES[t.margin] || 25;
   return {

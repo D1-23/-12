@@ -1,10 +1,9 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
 import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal, X, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import type { PrintTemplate } from '@/types/template';
-import { TEMPLATE_TYPE_LABELS, mmToPx } from '@/types/template';
+import { mmToPx } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
 import FieldSettingsDialog from './FieldSettingsDialog';
 import SignaturePad from './SignaturePad';
@@ -180,9 +179,6 @@ const TemplatePreview = ({
           <div className="text-sm font-medium text-foreground truncate">
             {template.name}
           </div>
-          <Badge variant="secondary" className="text-[10px] mt-0.5 px-1.5 py-0">
-            {TEMPLATE_TYPE_LABELS[template.type]}
-          </Badge>
         </div>
         <Button
           variant="ghost"
@@ -235,7 +231,6 @@ const TemplatePreview = ({
           enabledFields={template.fields}
           margin={template.margin}
           fontSize={template.fontSize}
-          mode={template.type}
           titleField={template.titleField}
           pageWidth={template.pageWidth}
           pageHeight={template.pageHeight}
