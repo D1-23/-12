@@ -1,0 +1,154 @@
+import { useCallback, useRef } from 'react';
+import type { SignatureArea } from '@/types/template';
+import { mmToPx } from '@/types/template';
+
+interface SignatureLayerProps {
+  areas: SignatureArea[];
+  signatureData: Record<string, string>;
+  recordIdx: number;
+  contentWidthMm: number;
+  pageHeightMm: number;
+  zoom: number;
+  editMode: boolean;
+  onSign: (recordIdx: number, areaId: string) => void;
+  onMove: (areaId: string, xMm: number, yMm: number) => void;
+}
+
+const DRAG_THRESHOLD = 5;
+const pxToMm = (px: number) => px / 3.779527559;
+
+const SignatureLayer = ({
+  areas,
+  signatureData,
+  recordIdx,
+  contentWidthMm,
+  pageHeightMm,
+  zoom,
+  editMode,
+  onSign,
+  onMove,
+}: SignatureLayerProps) => {
+  const dragStateRef = useRef<{
+    areaId: string;
+    startClientX: number;
+    startClientY: number;
+    origXMm: number;
+    origYMm: number;
+    hasMoved: boolean;
+  } | null>(null);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, area: SignatureArea) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragStateRef.current = {
+        areaId: area.id,
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        origXMm: area.xMm,
+        origYMm: area.yMm,
+        hasMoved: false,
+      };
+
+      const handleMouseMove = (ev: MouseEvent) => {
+        const ds = dragStateRef.current;
+        if (!ds) return;
+        const dxPx = (ev.clientX - ds.startClientX) / zoom;
+        const dyPx = (ev.clientY - ds.startClientY) / zoom;
+
+        if (Math.abs(ev.clientX - ds.startClientX) > DRAG_THRESHOLD ||
+            Math.abs(ev.clientY - ds.startClientY) > DRAG_THRESHOLD) {
+          ds.hasMoved = true;
+        }
+
+        let newX = ds.origXMm + pxToMm(dxPx);
+        let newY = ds.origYMm + pxToMm(dyPx);
+
+        newX = Math.max(0, Math.min(newX, contentWidthMm - area.widthMm));
+        newY = Math.max(0, Math.min(newY, pageHeightMm - area.heightMm));
+
+        onMove(ds.areaId, newX, newY);
+      };
+
+      const handleMouseUp = (ev: MouseEvent) => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        const ds = dragStateRef.current;
+        dragStateRef.current = null;
+        if (ds && !ds.hasMoved) {
+          onSign(recordIdx, ds.areaId);
+        }
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    },
+    [zoom, contentWidthMm, pageHeightMm, onMove, onSign, recordIdx],
+  );
+
+  if (areas.length === 0) return null;
+
+  return (
+    <>
+      {areas.map((area) => {
+        const key = `${recordIdx}_${area.id}`;
+        const dataUrl = signatureData[key];
+        const widthPx = Math.round(mmToPx(area.widthMm));
+        const heightPx = Math.round(mmToPx(area.heightMm));
+        const leftPx = Math.round(mmToPx(area.xMm));
+        const topPx = Math.round(mmToPx(area.yMm));
+
+        return (
+          <div
+            key={area.id}
+            className={`signature-area ${editMode ? 'signature-area-edit' : ''}`}
+            style={{
+              position: 'absolute',
+              left: leftPx,
+              top: topPx,
+              width: widthPx,
+              height: heightPx,
+              cursor: editMode ? 'move' : 'default',
+              zIndex: 10,
+            }}
+            onMouseDown={editMode ? (e) => handleMouseDown(e, area) : undefined}
+          >
+            {dataUrl ? (
+              <img
+                src={dataUrl}
+                alt="signature"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  pointerEvents: 'none',
+                }}
+              />
+            ) : (
+              editMode && (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: '1px dashed #86909C',
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 10,
+                    color: '#86909C',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  点击签名
+                </div>
+              )
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+};
+
+export default SignatureLayer;

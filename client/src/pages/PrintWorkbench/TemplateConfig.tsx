@@ -6,6 +6,8 @@ import {
   Save,
   CheckSquare,
   Square,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { PrintTemplate, MarginOption, FontSizeOption, TemplateType, PaperSize, Orientation } from '@/types/template';
+import type { PrintTemplate, MarginOption, FontSizeOption, TemplateType, PaperSize, Orientation, SignatureArea } from '@/types/template';
 import {
   MARGIN_LABELS,
   FONT_SIZE_LABELS,
@@ -26,6 +28,7 @@ import {
   ORIENTATION_LABELS,
   PAPER_SIZES,
   DEFAULT_PAGE_MARGINS,
+  generateId,
 } from '@/types/template';
 
 interface TemplateConfigProps {
@@ -336,6 +339,57 @@ const TemplateConfig = ({
             ))}
           </div>
         </div>
+
+        {draft.type === 'record' && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-muted-foreground">
+                签名区域 ({(draft.signatureAreas ?? []).length})
+              </label>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  disabled={(draft.signatureAreas ?? []).length >= 5}
+                  onClick={() => {
+                    const areas = draft.signatureAreas ?? [];
+                    const newArea: SignatureArea = {
+                      id: generateId(),
+                      xMm: areas.length * 65,
+                      yMm: draft.pageHeight - draft.margins.bottom - 30,
+                      widthMm: 60,
+                      heightMm: 25,
+                    };
+                    setDraft((prev) => ({
+                      ...prev,
+                      signatureAreas: [...(prev.signatureAreas ?? []), newArea],
+                    }));
+                  }}
+                >
+                  <Plus className="size-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  disabled={(draft.signatureAreas ?? []).length === 0}
+                  onClick={() => {
+                    setDraft((prev) => ({
+                      ...prev,
+                      signatureAreas: (prev.signatureAreas ?? []).slice(0, -1),
+                    }));
+                  }}
+                >
+                  <Minus className="size-3.5" />
+                </Button>
+              </div>
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              在预览页面中可拖拽签名位置并手写签名
+            </div>
+          </div>
+        )}
 
         {draft.fields.length > 0 && (
           <div>
