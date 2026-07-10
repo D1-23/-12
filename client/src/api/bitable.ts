@@ -14,6 +14,17 @@ export interface FieldMeta {
 let sdkModule: typeof import('@lark-base-open/js-sdk') | null = null;
 let sdkInitFailed = false;
 
+const SDK_CALL_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} 超时 (${ms}ms)`)), ms),
+    ),
+  ]);
+}
+
 async function getSDKModule(): Promise<typeof import('@lark-base-open/js-sdk') | null> {
   if (sdkInitFailed) return null;
   if (!sdkModule) {
@@ -41,8 +52,8 @@ export function isSDKAvailable(): boolean {
 export async function getFieldMetaList(): Promise<FieldMeta[]> {
   const sdk = await getSDK();
   if (!sdk) throw new Error('Bitable SDK 不可用');
-  const table = await sdk.base.getActiveTable();
-  const metaList = await table.getFieldMetaList();
+  const table = await withTimeout(sdk.base.getActiveTable(), SDK_CALL_TIMEOUT_MS, 'getActiveTable');
+  const metaList = await withTimeout(table.getFieldMetaList(), SDK_CALL_TIMEOUT_MS, 'getFieldMetaList');
   return metaList.map((m: { id: string; name: string; type?: number }) => ({
     id: m.id,
     name: m.name,
@@ -202,7 +213,7 @@ export async function bridgeSetData<T>(key: string, data: T): Promise<boolean> {
   const sdk = await getSDK();
   if (!sdk) return false;
   try {
-    return await sdk.bridge.setData(key, data);
+    return await withTimeout(sdk.bridge.setData(key, data), SDK_CALL_TIMEOUT_MS, 'bridge.setData');
   } catch (err) {
     logger.warn(`bridge.setData 失败: ${String(err)}`);
     return false;
@@ -213,7 +224,7 @@ export async function bridgeGetData<T>(key: string): Promise<T | null> {
   const sdk = await getSDK();
   if (!sdk) return null;
   try {
-    const data = await sdk.bridge.getData<T>(key);
+    const data = await withTimeout(sdk.bridge.getData<T>(key), SDK_CALL_TIMEOUT_MS, 'bridge.getData');
     return data ?? null;
   } catch (err) {
     logger.warn(`bridge.getData 失败: ${String(err)}`);

@@ -156,6 +156,9 @@ export function migrateTemplate(t: PrintTemplate): PrintTemplate {
 
   return {
     ...result,
+    fields: result.fields ?? [],
+    pinned: result.pinned ?? false,
+    createdAt: result.createdAt ?? Date.now(),
     showHeader: result.showHeader ?? false,
     showFooter: result.showFooter ?? false,
     header: result.header ?? { ...DEFAULT_HEADER },

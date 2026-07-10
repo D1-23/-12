@@ -74,7 +74,7 @@ const TemplateList = ({
             {template.name}
           </div>
           <div className="text-[10px] text-muted-foreground mt-0.5">
-            {template.fields.length} 个字段 · {new Date(template.createdAt).toLocaleDateString('zh-CN')}
+            {(template.fields?.length ?? 0)} 个字段 · {new Date(template.createdAt).toLocaleDateString('zh-CN')}
           </div>
         </div>
 

@@ -10,6 +10,15 @@ import {
   type BitableRecord,
 } from '@/api/bitable';
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} 超时 (${ms}ms)`)), ms),
+    ),
+  ]);
+}
+
 interface UseBitableDataResult {
   selectedRecord: BitableRecord | null;
   allFields: string[];
@@ -23,8 +32,9 @@ interface UseBitableDataResult {
   tableName: string;
 }
 
-const MAX_INIT_RETRIES = 3;
-const RETRY_DELAY_MS = 2000;
+const MAX_INIT_RETRIES = 5;
+const RETRY_DELAY_MS = 3000;
+const SDK_CALL_TIMEOUT_MS = 8000;
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -123,7 +133,7 @@ export function useBitableData(): UseBitableDataResult {
         if (!cancelled && name) setTableName(name);
 
         const { bitable: sdk } = await import('@lark-base-open/js-sdk');
-        const selection = await sdk.base.getSelection();
+        const selection = await withTimeout(sdk.base.getSelection(), SDK_CALL_TIMEOUT_MS, 'getSelection');
         if (cancelled) return;
 
         if (selection?.recordId) {
@@ -140,7 +150,7 @@ export function useBitableData(): UseBitableDataResult {
           await fetchSelectedRecords();
         });
 
-        const activeTable = await sdk.base.getActiveTable();
+        const activeTable = await withTimeout(sdk.base.getActiveTable(), SDK_CALL_TIMEOUT_MS, 'getActiveTable');
         const unsubRecordModify = (
           activeTable as unknown as {
             onRecordModify: (cb: () => void) => () => void;
