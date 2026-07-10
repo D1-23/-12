@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, Printer, Settings, FileDown, ImageDown, CheckSquare, SlidersHorizontal, X, PenLine } from 'lucide-react';
+import { ArrowLeft, Printer, Settings, ImageDown, CheckSquare, SlidersHorizontal, X, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { showToast } from '@/api/bitable';
@@ -110,111 +110,9 @@ const TemplatePreview = ({
       window.print();
       document.head.removeChild(styleEl);
       printArea.innerHTML = '';
-      void showToast('打印已发送', 'success');
+      void showToast('已打开打印对话框，可选择「另存为 PDF」或打印机', 'success');
     } else {
       void showToast('打印失败：无内容可打印', 'error');
-    }
-  }, [template]);
-
-  const handleExportPdf = useCallback(async () => {
-    const content = previewRef.current?.getContent();
-    if (!content) return;
-
-    const pageWidthPx = Math.round(mmToPx(template.pageWidth));
-    const pageHeightPx = Math.round(mmToPx(template.pageHeight));
-
-    try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-
-      const container = document.createElement('div');
-      container.style.cssText =
-        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;background:#fff;font-family:system-ui,-apple-system,sans-serif;`;
-      container.innerHTML = content;
-
-      const exportStyle = document.createElement('style');
-      exportStyle.textContent = `
-        .print-page table {
-          border-collapse: collapse !important;
-          width: 100% !important;
-          table-layout: fixed !important;
-        }
-        .print-page col:first-child,
-        .print-page col:nth-child(3) { width: 110px !important; }
-        .print-page col:nth-child(2),
-        .print-page col:nth-child(4) { width: auto !important; }
-        .print-page td {
-          border: 1px solid #333333 !important;
-          padding: 3px 6px !important;
-          font-size: 11px !important;
-          line-height: 16px !important;
-          vertical-align: top !important;
-          word-break: break-word !important;
-          overflow-wrap: break-word !important;
-          background: #FFFFFF !important;
-        }
-        .print-page td:nth-child(odd) {
-          width: 110px !important;
-          font-weight: 600 !important;
-          color: #000000 !important;
-        }
-        .print-page td:nth-child(even) {
-          color: #1F2329 !important;
-        }
-        .print-page td[colspan] {
-          font-weight: 600 !important;
-          color: #000000 !important;
-        }
-      `;
-      container.appendChild(exportStyle);
-      document.body.appendChild(container);
-
-      const pageElements = Array.from(
-        container.querySelectorAll('.print-page'),
-      ) as HTMLElement[];
-
-      pageElements.forEach((el) => {
-        el.style.height = `${pageHeightPx}px`;
-        el.style.width = `${pageWidthPx}px`;
-        el.style.marginBottom = '0';
-      });
-
-      const pdf = new jsPDF({
-        orientation: template.pageWidth > template.pageHeight ? 'l' : 'p',
-        unit: 'mm',
-        format: [template.pageWidth, template.pageHeight],
-      });
-
-      for (let i = 0; i < pageElements.length; i++) {
-        const canvas = await html2canvas(pageElements[i], {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-
-        if (i > 0) pdf.addPage();
-        pdf.addImage(
-          imgData,
-          'PNG',
-          0,
-          0,
-          template.pageWidth,
-          template.pageHeight,
-        );
-      }
-
-      document.body.removeChild(container);
-
-      const dateStr = new Date().toISOString().slice(0, 10);
-      pdf.save(`${template.name}_${dateStr}.pdf`);
-      void showToast('PDF 已生成', 'success');
-    } catch (err) {
-      logger.error('PDF导出失败', String(err));
-      void showToast('PDF 导出失败', 'error');
     }
   }, [template]);
 
@@ -457,16 +355,6 @@ const TemplatePreview = ({
           长图
         </Button>
         <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2 text-xs gap-1"
-          onClick={handleExportPdf}
-          disabled={displayCount === 0 || template.fields.length === 0}
-        >
-          <FileDown className="size-3.5" />
-          PDF
-        </Button>
-        <Button
           size="sm"
           className="h-7 px-3 text-xs gap-1 bg-primary text-primary-foreground"
           onClick={handlePrint}
@@ -474,7 +362,7 @@ const TemplatePreview = ({
           data-ai-section-type="button"
         >
           <Printer className="size-3.5" />
-          打印
+          打印 / PDF
         </Button>
       </div>
 
