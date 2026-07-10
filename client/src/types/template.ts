@@ -1,16 +1,9 @@
+export type TemplateType = 'record';
+export type MarginOption = 'narrow' | 'standard' | 'wide';
+export type FontSizeOption = 'small' | 'medium' | 'large';
 export type PaperSize = 'A4' | 'A3' | 'A5' | 'Letter' | 'Custom';
 export type Orientation = 'portrait' | 'landscape';
 export type HeaderFooterAlignment = 'left' | 'center' | 'right';
-export type TextAlign = 'left' | 'center' | 'right' | 'justify';
-
-export type ElementType =
-  | 'text'
-  | 'table'
-  | 'image'
-  | 'qrcode'
-  | 'barcode'
-  | 'line'
-  | 'auto-table';
 
 export interface PageMargins {
   top: number;
@@ -33,119 +26,55 @@ export interface HeaderFooterConfig {
   alignment: HeaderFooterAlignment;
 }
 
-export interface BaseElement {
-  id: string;
-  type: ElementType;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface TextElement extends BaseElement {
-  type: 'text';
-  content: string;
-  fontSize: number;
-  bold: boolean;
-  italic: boolean;
-  underline: boolean;
-  align: TextAlign;
-  color: string;
-  backgroundColor: string;
-  lineHeight: number;
-}
-
-export interface TableCell {
-  content: string;
-  fontSize: number;
-  bold: boolean;
-  color: string;
-  backgroundColor: string;
-  align: TextAlign;
-  isMerged: boolean;
-  colspan: number;
-  rowspan: number;
-}
-
-export interface TableElement extends BaseElement {
-  type: 'table';
-  rows: number;
-  cols: number;
-  cells: TableCell[][];
-  headerRowCount: number;
-  tailRowCount: number;
-}
-
-export interface ImageElement extends BaseElement {
-  type: 'image';
-  src: string;
-  fit: 'contain' | 'cover' | 'fill';
-}
-
-export interface QrCodeElement extends BaseElement {
-  type: 'qrcode';
-  content: string;
-}
-
-export interface BarcodeElement extends BaseElement {
-  type: 'barcode';
-  content: string;
-  format: 'CODE128' | 'EAN13' | 'CODE39';
-}
-
-export interface LineElement extends BaseElement {
-  type: 'line';
-  color: string;
-  thickness: number;
-  style: 'solid' | 'dashed' | 'dotted';
-}
-
-export interface AutoTableElement extends BaseElement {
-  type: 'auto-table';
-  selectedFieldIds: string[];
-}
-
-export type PrintElement =
-  | TextElement
-  | TableElement
-  | ImageElement
-  | QrCodeElement
-  | BarcodeElement
-  | LineElement
-  | AutoTableElement;
-
-export interface VisibilityCondition {
-  field: string;
-  operator: 'equals' | 'not_equals' | 'greater' | 'less' | 'contains';
-  value: string;
-}
-
-export interface TemplatePage {
-  id: string;
-  name: string;
-  elements: PrintElement[];
-  visibilityConditions?: VisibilityCondition[];
-  visibilityLogic: 'all' | 'any';
-}
-
 export interface PrintTemplate {
   id: string;
   name: string;
-  pages: TemplatePage[];
+  type: TemplateType;
+  fields: string[];
+  margin: MarginOption;
+  fontSize: FontSizeOption;
+  titleField: string;
+  pinned: boolean;
+  createdAt: number;
   paperSize: PaperSize;
   orientation: Orientation;
   pageWidth: number;
   pageHeight: number;
   margins: PageMargins;
-  defaultFontSize: number;
-  pinned: boolean;
-  createdAt: number;
   signatureAreas?: SignatureArea[];
   showHeader?: boolean;
   showFooter?: boolean;
   header?: HeaderFooterConfig;
   footer?: HeaderFooterConfig;
 }
+
+export const MARGIN_LABELS: Record<MarginOption, string> = {
+  narrow: '窄',
+  standard: '标准',
+  wide: '宽',
+};
+
+export const FONT_SIZE_LABELS: Record<FontSizeOption, string> = {
+  small: '小',
+  medium: '中',
+  large: '大',
+};
+
+export const TEMPLATE_TYPE_LABELS: Record<TemplateType, string> = {
+  record: '记录模板',
+};
+
+export const MARGIN_VALUES: Record<MarginOption, number> = {
+  narrow: 15,
+  standard: 25,
+  wide: 35,
+};
+
+export const FONT_SIZES: Record<FontSizeOption, number> = {
+  small: 12,
+  medium: 14,
+  large: 16,
+};
 
 export const PAPER_SIZE_LABELS: Record<PaperSize, string> = {
   A4: 'A4',
@@ -168,10 +97,10 @@ export const PAPER_SIZES: Record<Exclude<PaperSize, 'Custom'>, { width: number; 
 };
 
 export const DEFAULT_PAGE_MARGINS: PageMargins = {
-  top: 20,
-  right: 20,
-  bottom: 20,
-  left: 20,
+  top: 25,
+  right: 25,
+  bottom: 25,
+  left: 25,
 };
 
 export const DEFAULT_HEADER: HeaderFooterConfig = {
@@ -186,16 +115,8 @@ export const DEFAULT_FOOTER: HeaderFooterConfig = {
   alignment: 'center',
 };
 
-export const FONT_SIZE_OPTIONS = [9, 10, 11, 12, 14, 16, 18, 24, 32, 48, 72];
-
-export const DEFAULT_ELEMENT_FONT_SIZE = 14;
-
 export function mmToPx(mm: number): number {
   return mm * 3.779527559;
-}
-
-export function pxToMm(px: number): number {
-  return px / 3.779527559;
 }
 
 export function replaceTemplateVars(
@@ -212,88 +133,34 @@ export function replaceTemplateVars(
     .replace(/\{\{print_time\}\}/g, printTime);
 }
 
-function migrateOldFieldsTemplate(
-  t: Record<string, unknown>,
-  id: string,
-): PrintTemplate {
-  const fields = Array.isArray(t.fields) ? (t.fields as string[]) : [];
-  const elements: PrintElement[] = [];
+export function migrateTemplate(t: PrintTemplate): PrintTemplate {
+  const base = t.type === 'record' ? t : { ...t, type: 'record' as TemplateType };
+  const marginVal = MARGIN_VALUES[t.margin] || 25;
 
-  if (fields.length > 0) {
-    elements.push({
-      id: generateId(),
-      type: 'auto-table',
-      x: 10,
-      y: 20,
-      width: 190,
-      height: 100,
-      selectedFieldIds: [...fields],
-    });
-  }
+  const result: PrintTemplate = (base.paperSize && base.margins)
+    ? (base.signatureAreas ? base : { ...base, signatureAreas: [] })
+    : {
+        ...t,
+        type: 'record' as TemplateType,
+        paperSize: 'A4' as PaperSize,
+        orientation: 'portrait' as Orientation,
+        pageWidth: 210,
+        pageHeight: 297,
+        margins: {
+          top: marginVal,
+          right: marginVal,
+          bottom: marginVal,
+          left: marginVal,
+        },
+      };
 
   return {
-    id,
-    name: (t.name as string) || '记录详情',
-    pages: [{
-      id: generateId(),
-      name: '第1页',
-      elements,
-      visibilityLogic: 'all',
-    }],
-    paperSize: 'A4',
-    orientation: 'portrait',
-    pageWidth: 210,
-    pageHeight: 297,
-    margins: { ...DEFAULT_PAGE_MARGINS },
-    defaultFontSize: DEFAULT_ELEMENT_FONT_SIZE,
-    pinned: false,
-    createdAt: Date.now(),
-    signatureAreas: [],
-    showHeader: false,
-    showFooter: true,
-    header: { ...DEFAULT_HEADER },
-    footer: { ...DEFAULT_FOOTER },
+    ...result,
+    showHeader: result.showHeader ?? false,
+    showFooter: result.showFooter ?? false,
+    header: result.header ?? { ...DEFAULT_HEADER },
+    footer: result.footer ?? { ...DEFAULT_FOOTER },
   };
-}
-
-export function migrateTemplate(t: unknown): PrintTemplate {
-  const raw = t as Record<string, unknown>;
-  const id = (raw.id as string) || generateId();
-
-  if (Array.isArray(raw.pages) && raw.pages.length > 0) {
-    const page = raw.pages[0] as Record<string, unknown>;
-    if (Array.isArray(page.elements)) {
-      return {
-        id,
-        name: (raw.name as string) || '未命名模板',
-        pages: (raw.pages as unknown[]).map((p) => {
-          const pg = p as Record<string, unknown>;
-          return {
-            id: (pg.id as string) || generateId(),
-            name: (pg.name as string) || '第1页',
-            elements: (pg.elements as PrintElement[]) || [],
-            visibilityConditions: pg.visibilityConditions as VisibilityCondition[] | undefined,
-            visibilityLogic: (pg.visibilityLogic as 'all' | 'any') || 'all',
-          };
-        }),
-        paperSize: (raw.paperSize as PaperSize) || 'A4',
-        orientation: (raw.orientation as Orientation) || 'portrait',
-        pageWidth: (raw.pageWidth as number) || 210,
-        pageHeight: (raw.pageHeight as number) || 297,
-        margins: (raw.margins as PageMargins) || { ...DEFAULT_PAGE_MARGINS },
-        defaultFontSize: (raw.defaultFontSize as number) || DEFAULT_ELEMENT_FONT_SIZE,
-        pinned: (raw.pinned as boolean) || false,
-        createdAt: (raw.createdAt as number) || Date.now(),
-        signatureAreas: (raw.signatureAreas as SignatureArea[]) || [],
-        showHeader: (raw.showHeader as boolean) ?? false,
-        showFooter: (raw.showFooter as boolean) ?? true,
-        header: (raw.header as HeaderFooterConfig) || { ...DEFAULT_HEADER },
-        footer: (raw.footer as HeaderFooterConfig) || { ...DEFAULT_FOOTER },
-      };
-    }
-  }
-
-  return migrateOldFieldsTemplate(raw, id);
 }
 
 const STORAGE_KEY = 'docugenius_templates';

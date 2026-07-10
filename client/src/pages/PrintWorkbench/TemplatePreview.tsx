@@ -1,32 +1,31 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import {
-  ArrowLeft,
-  Printer,
-  Pencil,
-  FileDown,
-  ImageDown,
-  CheckSquare,
-  X,
-  PenLine,
-} from 'lucide-react';
+import { ArrowLeft, Printer, Settings, FileDown, ImageDown, CheckSquare, SlidersHorizontal, X, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { showToast } from '@/api/bitable';
-import type { PrintTemplate, SignatureArea } from '@/types/template';
+import type { PrintTemplate } from '@/types/template';
 import { mmToPx } from '@/types/template';
-import PreviewCanvas, { type PreviewCanvasHandle } from './preview/PreviewCanvas';
+import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
+import FieldSettingsDialog from './FieldSettingsDialog';
 import SignaturePad from './SignaturePad';
-import type { BitableRecord } from '@/api/bitable';
+import type { SignatureArea } from '@/types/template';
+import { generateId } from '@/types/template';
+
+interface RecordWithId {
+  id: string;
+  record: Record<string, unknown>;
+}
 
 interface TemplatePreviewProps {
   template: PrintTemplate;
-  recordsWithIds: BitableRecord[];
-  selectedRecords: BitableRecord[];
+  recordsWithIds: RecordWithId[];
+  selectedRecords: RecordWithId[];
   allFields: string[];
   fieldTypes: Record<string, number>;
   tableName: string;
   onBack: () => void;
   onEdit: () => void;
+  onUpdateFields?: (fields: string[]) => void;
   onUpdateSignatures?: (areas: SignatureArea[]) => void;
 }
 
@@ -39,10 +38,12 @@ const TemplatePreview = ({
   tableName,
   onBack,
   onEdit,
+  onUpdateFields,
   onUpdateSignatures,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
   const [batchMode, setBatchMode] = useState(false);
+  const [showFieldDialog, setShowFieldDialog] = useState(false);
   const [batchDismissed, setBatchDismissed] = useState(false);
   const [signatureData, setSignatureData] = useState<Record<string, string>>({});
   const [signingArea, setSigningArea] = useState<{ recordIdx: number; areaId: string } | null>(null);
@@ -51,14 +52,29 @@ const TemplatePreview = ({
   const hasMultipleSelected = selectedRecords.length > 1;
   const showBatchPrompt = hasMultipleSelected && !batchMode && !batchDismissed;
 
-  const displayRecords = useMemo<BitableRecord[]>(() => {
+  const displayRecords = useMemo(() => {
     if (batchMode && selectedRecords.length > 0) {
-      return selectedRecords;
+      return selectedRecords.map((r) => r.record);
     }
-    return recordsWithIds;
+    return recordsWithIds.map((r) => r.record);
   }, [batchMode, selectedRecords, recordsWithIds]);
 
   const displayCount = displayRecords.length;
+
+  const handleEnterBatch = useCallback(() => {
+    setBatchMode(true);
+    setBatchDismissed(false);
+  }, []);
+
+  const handleDismissBatch = useCallback(() => {
+    setBatchDismissed(true);
+  }, []);
+
+  const handleExitBatch = useCallback(() => {
+    setBatchMode(false);
+    setBatchDismissed(false);
+  }, []);
+
   const signatureAreas = template.signatureAreas ?? [];
 
   const handleSign = useCallback((recordIdx: number, areaId: string) => {
@@ -72,16 +88,13 @@ const TemplatePreview = ({
     setSigningArea(null);
   }, [signingArea]);
 
-  const handleMoveSig = useCallback(
-    (areaId: string, xMm: number, yMm: number) => {
-      if (!onUpdateSignatures) return;
-      const updated = signatureAreas.map((a) =>
-        a.id === areaId ? { ...a, xMm, yMm } : a,
-      );
-      onUpdateSignatures(updated);
-    },
-    [onUpdateSignatures, signatureAreas],
-  );
+  const handleMoveSig = useCallback((areaId: string, xMm: number, yMm: number) => {
+    if (!onUpdateSignatures) return;
+    const updated = signatureAreas.map((a) =>
+      a.id === areaId ? { ...a, xMm, yMm } : a,
+    );
+    onUpdateSignatures(updated);
+  }, [onUpdateSignatures, signatureAreas]);
 
   const handlePrint = useCallback(() => {
     const content = previewRef.current?.getContent();
@@ -144,12 +157,22 @@ const TemplatePreview = ({
           useCORS: true,
           backgroundColor: '#ffffff',
         });
+
         const imgData = canvas.toDataURL('image/png');
+
         if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, 0, template.pageWidth, template.pageHeight);
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,
+          0,
+          template.pageWidth,
+          template.pageHeight,
+        );
       }
 
       document.body.removeChild(container);
+
       const dateStr = new Date().toISOString().slice(0, 10);
       pdf.save(`${template.name}_${dateStr}.pdf`);
       void showToast('PDF 已生成', 'success');
@@ -248,10 +271,19 @@ const TemplatePreview = ({
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
+          onClick={() => setShowFieldDialog(true)}
+        >
+          <SlidersHorizontal className="size-3.5" />
+          编辑
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs gap-1"
           onClick={onEdit}
         >
-          <Pencil className="size-3.5" />
-          编辑
+          <Settings className="size-3.5" />
+          配置
         </Button>
       </div>
 
@@ -264,10 +296,7 @@ const TemplatePreview = ({
           <Button
             size="sm"
             className="h-6 px-2 text-[11px] bg-primary text-primary-foreground"
-            onClick={() => {
-              setBatchMode(true);
-              setBatchDismissed(false);
-            }}
+            onClick={handleEnterBatch}
           >
             批量预览
           </Button>
@@ -275,23 +304,33 @@ const TemplatePreview = ({
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0 text-muted-foreground"
-            onClick={() => setBatchDismissed(true)}
+            onClick={handleDismissBatch}
           >
             <X className="size-3" />
           </Button>
         </div>
       )}
 
-      <div className="flex-1 relative overflow-auto bg-gray-100">
+      <div className="flex-1 relative overflow-hidden flex flex-col">
         <PreviewCanvas
           ref={previewRef}
-          template={template}
           records={displayRecords}
+          enabledFields={template.fields}
+          margin={template.margin}
+          fontSize={template.fontSize}
+          titleField={template.titleField}
+          pageWidth={template.pageWidth}
+          pageHeight={template.pageHeight}
+          margins={template.margins}
           fieldTypes={fieldTypes}
           tableName={tableName}
           signatureAreas={signatureAreas}
           signatureData={signatureData}
           signatureEditMode={sigEditMode}
+          showHeader={template.showHeader ?? false}
+          showFooter={template.showFooter ?? false}
+          header={template.header}
+          footer={template.footer}
           onSign={handleSign}
           onMoveSig={handleMoveSig}
         />
@@ -309,7 +348,7 @@ const TemplatePreview = ({
 
       <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card shrink-0">
         <span className="text-[11px] text-muted-foreground truncate flex-1">
-          {template.pages.length} 页 · {batchMode
+          {template.fields.length} 个字段 · {batchMode
             ? `${selectedRecords.length} 条记录`
             : `${recordsWithIds.length > 0 ? 1 : 0} 条记录`}
         </span>
@@ -318,10 +357,7 @@ const TemplatePreview = ({
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs gap-1 text-muted-foreground"
-            onClick={() => {
-              setBatchMode(false);
-              setBatchDismissed(false);
-            }}
+            onClick={handleExitBatch}
           >
             <X className="size-3.5" />
             退出批量
@@ -343,7 +379,7 @@ const TemplatePreview = ({
           size="sm"
           className="h-7 px-2 text-xs gap-1"
           onClick={handleExportImage}
-          disabled={displayCount === 0}
+          disabled={displayCount === 0 || template.fields.length === 0}
         >
           <ImageDown className="size-3.5" />
           长图
@@ -353,7 +389,7 @@ const TemplatePreview = ({
           size="sm"
           className="h-7 px-2 text-xs gap-1"
           onClick={handleExportPdf}
-          disabled={displayCount === 0}
+          disabled={displayCount === 0 || template.fields.length === 0}
         >
           <FileDown className="size-3.5" />
           PDF
@@ -362,7 +398,7 @@ const TemplatePreview = ({
           size="sm"
           className="h-7 px-3 text-xs gap-1 bg-primary text-primary-foreground"
           onClick={handlePrint}
-          disabled={displayCount === 0}
+          disabled={displayCount === 0 || template.fields.length === 0}
           data-ai-section-type="button"
         >
           <Printer className="size-3.5" />
@@ -371,6 +407,14 @@ const TemplatePreview = ({
       </div>
 
       <div id="print-area" className="hidden" />
+
+      <FieldSettingsDialog
+        open={showFieldDialog}
+        onOpenChange={setShowFieldDialog}
+        allFields={allFields}
+        enabledFields={template.fields}
+        onConfirm={(fields) => onUpdateFields?.(fields)}
+      />
 
       <SignaturePad
         open={signingArea !== null}
