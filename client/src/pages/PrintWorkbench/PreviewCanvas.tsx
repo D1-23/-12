@@ -22,6 +22,7 @@ interface PreviewCanvasProps {
   fieldTypes: Record<string, number>;
   tableName: string;
   signatureAreas: SignatureArea[];
+  showSignature: boolean;
   signatureData: Record<string, string>;
   signatureEditMode: boolean;
   showHeader: boolean;
@@ -45,6 +46,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       fieldTypes,
       tableName,
       signatureAreas,
+      showSignature,
       signatureData,
       signatureEditMode,
       showHeader,
@@ -258,7 +260,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
           {renderMergedTable(rows)}
 
-          {signatureAreas.length > 0 && (
+          {showSignature && signatureAreas.length > 0 && (
             <SignatureLayer
               areas={signatureAreas}
               signatureData={signatureData}

@@ -42,6 +42,7 @@ export interface PrintTemplate {
   pageHeight: number;
   margins: PageMargins;
   signatureAreas?: SignatureArea[];
+  showSignature?: boolean;
   showHeader?: boolean;
   showFooter?: boolean;
   header?: HeaderFooterConfig;
@@ -159,6 +160,7 @@ export function migrateTemplate(t: PrintTemplate): PrintTemplate {
     fields: result.fields ?? [],
     pinned: result.pinned ?? false,
     createdAt: result.createdAt ?? Date.now(),
+    showSignature: result.showSignature ?? true,
     showHeader: result.showHeader ?? false,
     showFooter: result.showFooter ?? false,
     header: result.header ?? { ...DEFAULT_HEADER },

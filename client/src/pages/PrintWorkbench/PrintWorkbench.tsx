@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FileText } from 'lucide-react';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import type { PrintTemplate, SignatureArea } from '@/types/template';
+import type { PrintTemplate, SignatureArea, FontSizeOption } from '@/types/template';
 import { loadTemplates, saveTemplates, migrateTemplate, DEFAULT_PAGE_MARGINS } from '@/types/template';
 import { useBitableData } from '@/hooks/useBitableData';
 import TemplateList from './TemplateList';
@@ -45,6 +45,7 @@ function createDefaultTemplates(allFields: string[]): PrintTemplate[] {
       pageHeight: 297,
       margins: { ...DEFAULT_PAGE_MARGINS },
       signatureAreas: [],
+      showSignature: true,
       showHeader: false,
       showFooter: true,
       header: { text: '', fontSize: 10, alignment: 'center' },
@@ -127,6 +128,7 @@ const PrintWorkbench = () => {
         pageHeight: 297,
         margins: { ...DEFAULT_PAGE_MARGINS },
         signatureAreas: [],
+        showSignature: true,
         showHeader: false,
         showFooter: true,
         header: { text: '', fontSize: 10, alignment: 'center' },
@@ -194,6 +196,17 @@ const PrintWorkbench = () => {
     [templates]
   );
 
+  const handleUpdateFontSize = useCallback(
+    (templateId: string, fontSize: FontSizeOption) => {
+      const newTemplates = templates.map((t) =>
+        t.id === templateId ? { ...t, fontSize } : t
+      );
+      setTemplates(newTemplates);
+      void saveTemplates(newTemplates);
+    },
+    [templates]
+  );
+
   const handleUpdateSignatures = useCallback(
     (templateId: string, areas: SignatureArea[]) => {
       const newTemplates = templates.map((t) =>
@@ -253,6 +266,7 @@ const PrintWorkbench = () => {
         onEdit={() => setView('config')}
         onUpdateFields={(fields) => handleUpdateFields(activeTemplate.id, fields)}
         onUpdateSignatures={(areas) => handleUpdateSignatures(activeTemplate.id, areas)}
+        onUpdateFontSize={(fontSize) => handleUpdateFontSize(activeTemplate.id, fontSize)}
       />
     );
   }

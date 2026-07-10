@@ -3,8 +3,8 @@ import { ArrowLeft, Printer, Settings, ImageDown, CheckSquare, SlidersHorizontal
 import { Button } from '@/components/ui/button';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { showToast } from '@/api/bitable';
-import type { PrintTemplate } from '@/types/template';
-import { mmToPx } from '@/types/template';
+import type { PrintTemplate, FontSizeOption } from '@/types/template';
+import { mmToPx, FONT_SIZE_LABELS } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
 import FieldSettingsDialog from './FieldSettingsDialog';
 import SignaturePad from './SignaturePad';
@@ -27,6 +27,7 @@ interface TemplatePreviewProps {
   onEdit: () => void;
   onUpdateFields?: (fields: string[]) => void;
   onUpdateSignatures?: (areas: SignatureArea[]) => void;
+  onUpdateFontSize?: (fontSize: FontSizeOption) => void;
 }
 
 const TemplatePreview = ({
@@ -40,6 +41,7 @@ const TemplatePreview = ({
   onEdit,
   onUpdateFields,
   onUpdateSignatures,
+  onUpdateFontSize,
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
   const [batchMode, setBatchMode] = useState(false);
@@ -237,6 +239,22 @@ const TemplatePreview = ({
             {template.name}
           </div>
         </div>
+        <div className="flex items-center rounded-md border border-border overflow-hidden h-7 shrink-0">
+          {(['small', 'medium', 'large'] as FontSizeOption[]).map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onUpdateFontSize?.(opt)}
+              className={`px-1.5 text-[10px] h-full transition-colors ${
+                template.fontSize === opt
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card text-muted-foreground hover:bg-accent'
+              }`}
+            >
+              {FONT_SIZE_LABELS[opt]}
+            </button>
+          ))}
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -295,6 +313,7 @@ const TemplatePreview = ({
           fieldTypes={fieldTypes}
           tableName={tableName}
           signatureAreas={signatureAreas}
+          showSignature={template.showSignature ?? true}
           signatureData={signatureData}
           signatureEditMode={sigEditMode}
           showHeader={template.showHeader ?? false}
@@ -333,7 +352,7 @@ const TemplatePreview = ({
             退出批量
           </Button>
         )}
-        {signatureAreas.length > 0 && (
+        {(template.showSignature ?? true) && signatureAreas.length > 0 && (
           <Button
             variant="ghost"
             size="sm"

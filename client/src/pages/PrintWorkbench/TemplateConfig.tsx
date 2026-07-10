@@ -20,10 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { PrintTemplate, MarginOption, FontSizeOption, PaperSize, Orientation, PageMargins, SignatureArea, HeaderFooterAlignment } from '@/types/template';
+import type { PrintTemplate, MarginOption, PaperSize, Orientation, PageMargins, SignatureArea, HeaderFooterAlignment } from '@/types/template';
 import {
   MARGIN_LABELS,
-  FONT_SIZE_LABELS,
   PAPER_SIZE_LABELS,
   ORIENTATION_LABELS,
   PAPER_SIZES,
@@ -39,8 +38,6 @@ interface TemplateConfigProps {
   onSave: (updated: PrintTemplate) => void;
   onBack: () => void;
 }
-
-const FONT_OPTIONS: FontSizeOption[] = ['small', 'medium', 'large'];
 
 const TemplateConfig = ({
   template,
@@ -301,32 +298,10 @@ const TemplateConfig = ({
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">
-            字号
-          </label>
-          <div className="flex items-center rounded-md border border-border overflow-hidden h-8">
-            {FONT_OPTIONS.map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => setDraft((prev) => ({ ...prev, fontSize: opt }))}
-                className={`flex-1 text-xs h-full transition-colors ${
-                  draft.fontSize === opt
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-card text-muted-foreground hover:bg-accent'
-                }`}
-              >
-                {FONT_SIZE_LABELS[opt]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs text-muted-foreground">
               签名区域 ({(draft.signatureAreas ?? []).length})
-              </label>
+            </label>
               <div className="flex gap-1">
                 <Button
                   variant="ghost"
@@ -366,7 +341,14 @@ const TemplateConfig = ({
                 </Button>
               </div>
             </div>
-            <div className="text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-2 mt-2">
+              <Checkbox
+                checked={draft.showSignature ?? true}
+                onCheckedChange={(v) => setDraft((prev) => ({ ...prev, showSignature: v === true }))}
+              />
+              <span className="text-[10px] text-muted-foreground">显示签名区域</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-1">
               在预览页面中可拖拽签名位置并手写签名
             </div>
           </div>
