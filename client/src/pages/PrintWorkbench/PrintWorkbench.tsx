@@ -1,56 +1,48 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FileText } from 'lucide-react';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
-import type { PrintTemplate, SignatureArea } from '@/types/template';
-import { loadTemplates, saveTemplates, migrateTemplate, DEFAULT_PAGE_MARGINS } from '@/types/template';
+import type { PrintTemplate, SignatureArea, TemplatePage } from '@/types/template';
+import {
+  loadTemplates,
+  saveTemplates,
+  migrateTemplate,
+  DEFAULT_PAGE_MARGINS,
+  DEFAULT_HEADER,
+  DEFAULT_FOOTER,
+  DEFAULT_ELEMENT_FONT_SIZE,
+  generateId,
+} from '@/types/template';
 import { useBitableData } from '@/hooks/useBitableData';
 import TemplateList from './TemplateList';
 import TemplatePreview from './TemplatePreview';
-import TemplateConfig from './TemplateConfig';
+import TemplateEditor from './editor/TemplateEditor';
 
-type ViewMode = 'list' | 'preview' | 'config';
+type ViewMode = 'list' | 'editor' | 'preview';
 
-function extractFieldsFromRecords(
-  recs: Array<{ record: Record<string, unknown> }>
-): string[] {
-  const fieldSet = new Set<string>();
-  for (const { record } of recs) {
-    for (const key of Object.keys(record)) {
-      fieldSet.add(key);
-    }
-  }
-  return Array.from(fieldSet);
-}
-
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
-function createDefaultTemplates(allFields: string[]): PrintTemplate[] {
-  const now = Date.now();
-  return [
-    {
+function createDefaultTemplate(name: string): PrintTemplate {
+  return {
+    id: generateId(),
+    name,
+    pages: [{
       id: generateId(),
-      name: '记录详情',
-      type: 'record',
-      fields: [...allFields],
-      margin: 'standard',
-      fontSize: 'medium',
-      titleField: allFields[0] || '',
-      pinned: false,
-      createdAt: now,
-      paperSize: 'A4',
-      orientation: 'portrait',
-      pageWidth: 210,
-      pageHeight: 297,
-      margins: { ...DEFAULT_PAGE_MARGINS },
-      signatureAreas: [],
-      showHeader: false,
-      showFooter: true,
-      header: { text: '', fontSize: 10, alignment: 'center' },
-      footer: { text: '第 {{page_number}} / {{total_pages}} 页', fontSize: 10, alignment: 'center' },
-    },
-  ];
+      name: '第1页',
+      elements: [],
+      visibilityLogic: 'all',
+    }],
+    paperSize: 'A4',
+    orientation: 'portrait',
+    pageWidth: 210,
+    pageHeight: 297,
+    margins: { ...DEFAULT_PAGE_MARGINS },
+    defaultFontSize: DEFAULT_ELEMENT_FONT_SIZE,
+    pinned: false,
+    createdAt: Date.now(),
+    signatureAreas: [],
+    showHeader: false,
+    showFooter: true,
+    header: { ...DEFAULT_HEADER },
+    footer: { ...DEFAULT_FOOTER },
+  };
 }
 
 const PrintWorkbench = () => {
@@ -71,19 +63,16 @@ const PrintWorkbench = () => {
   useEffect(() => {
     const initTemplates = async () => {
       if (loading) return;
-      const fields = allFields.length > 0 ? allFields : extractFieldsFromRecords(allRecords);
-      const stored = (await loadTemplates()).map(migrateTemplate).map((t) =>
-        t.type === 'record' ? t : { ...t, type: 'record' as const }
-      );
+      const stored = (await loadTemplates()).map(migrateTemplate);
       if (stored.length > 0) {
         setTemplates(stored);
-        if (stored.some((t) => !t.paperSize)) {
+        if (stored.some((t) => !t.pages)) {
           void saveTemplates(stored);
         }
       } else {
-        const defaults = createDefaultTemplates(fields);
-        setTemplates(defaults);
-        void saveTemplates(defaults);
+        const defaultTpl = createDefaultTemplate('排版示例');
+        setTemplates([defaultTpl]);
+        void saveTemplates([defaultTpl]);
       }
     };
     void initTemplates();
@@ -111,34 +100,14 @@ const PrintWorkbench = () => {
 
   const handleCreateTemplate = useCallback(
     (name: string) => {
-      const newTemplate: PrintTemplate = {
-        id: generateId(),
-        name,
-        type: 'record',
-        fields: [...allFields],
-        margin: 'standard',
-        fontSize: 'medium',
-        titleField: allFields[0] || '',
-        pinned: false,
-        createdAt: Date.now(),
-        paperSize: 'A4',
-        orientation: 'portrait',
-        pageWidth: 210,
-        pageHeight: 297,
-        margins: { ...DEFAULT_PAGE_MARGINS },
-        signatureAreas: [],
-        showHeader: false,
-        showFooter: true,
-        header: { text: '', fontSize: 10, alignment: 'center' },
-        footer: { text: '第 {{page_number}} / {{total_pages}} 页', fontSize: 10, alignment: 'center' },
-      };
+      const newTemplate = createDefaultTemplate(name);
       const updated = [...templates, newTemplate];
       setTemplates(updated);
       void saveTemplates(updated);
       setActiveTemplateId(newTemplate.id);
-      setView('preview');
+      setView('editor');
     },
-    [templates, allFields]
+    [templates],
   );
 
   const handleDeleteTemplate = useCallback(
@@ -152,7 +121,7 @@ const PrintWorkbench = () => {
         setView('list');
       }
     },
-    [templates, activeTemplateId]
+    [templates, activeTemplateId],
   );
 
   const handleDuplicateTemplate = useCallback(
@@ -164,45 +133,39 @@ const PrintWorkbench = () => {
         id: generateId(),
         name: `${source.name} (副本)`,
         createdAt: Date.now(),
+        pages: source.pages.map((p) => ({
+          ...p,
+          id: generateId(),
+          elements: p.elements.map((e) => ({ ...e, id: generateId() })),
+        })),
       };
       const updated = [...templates, copy];
       setTemplates(updated);
       void saveTemplates(updated);
     },
-    [templates]
+    [templates],
   );
 
   const handleSaveTemplate = useCallback(
     (updated: PrintTemplate) => {
       const newTemplates = templates.map((t) =>
-        t.id === updated.id ? updated : t
+        t.id === updated.id ? updated : t,
       );
       setTemplates(newTemplates);
       void saveTemplates(newTemplates);
     },
-    [templates]
-  );
-
-  const handleUpdateFields = useCallback(
-    (templateId: string, fields: string[]) => {
-      const newTemplates = templates.map((t) =>
-        t.id === templateId ? { ...t, fields } : t
-      );
-      setTemplates(newTemplates);
-      void saveTemplates(newTemplates);
-    },
-    [templates]
+    [templates],
   );
 
   const handleUpdateSignatures = useCallback(
     (templateId: string, areas: SignatureArea[]) => {
       const newTemplates = templates.map((t) =>
-        t.id === templateId ? { ...t, signatureAreas: areas } : t
+        t.id === templateId ? { ...t, signatureAreas: areas } : t,
       );
       setTemplates(newTemplates);
       void saveTemplates(newTemplates);
     },
-    [templates]
+    [templates],
   );
 
   if (loading) {
@@ -226,13 +189,19 @@ const PrintWorkbench = () => {
     );
   }
 
-  if (view === 'config' && activeTemplate) {
+  if (view === 'editor' && activeTemplate) {
+    const recordData = sdkAvailable && selectedRecord
+      ? selectedRecord.record
+      : allRecords[0]?.record;
     return (
-      <TemplateConfig
+      <TemplateEditor
         template={activeTemplate}
         allFields={allFields}
+        fieldTypes={fieldTypes}
+        record={recordData}
         onSave={handleSaveTemplate}
-        onBack={() => setView('preview')}
+        onBack={() => setView('list')}
+        onPreview={() => setView('preview')}
       />
     );
   }
@@ -250,8 +219,7 @@ const PrintWorkbench = () => {
         fieldTypes={fieldTypes}
         tableName={tableName}
         onBack={() => setView('list')}
-        onEdit={() => setView('config')}
-        onUpdateFields={(fields) => handleUpdateFields(activeTemplate.id, fields)}
+        onEdit={() => setView('editor')}
         onUpdateSignatures={(areas) => handleUpdateSignatures(activeTemplate.id, areas)}
       />
     );
