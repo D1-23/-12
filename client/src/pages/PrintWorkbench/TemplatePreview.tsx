@@ -133,6 +133,42 @@ const TemplatePreview = ({
       container.style.cssText =
         `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;background:#fff;font-family:system-ui,-apple-system,sans-serif;`;
       container.innerHTML = content;
+
+      const exportStyle = document.createElement('style');
+      exportStyle.textContent = `
+        .print-page table {
+          border-collapse: collapse !important;
+          width: 100% !important;
+          table-layout: fixed !important;
+        }
+        .print-page col:first-child,
+        .print-page col:nth-child(3) { width: 110px !important; }
+        .print-page col:nth-child(2),
+        .print-page col:nth-child(4) { width: auto !important; }
+        .print-page td {
+          border: 1px solid #333333 !important;
+          padding: 3px 6px !important;
+          font-size: 11px !important;
+          line-height: 16px !important;
+          vertical-align: top !important;
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
+          background: #FFFFFF !important;
+        }
+        .print-page td:nth-child(odd) {
+          width: 110px !important;
+          font-weight: 600 !important;
+          color: #000000 !important;
+        }
+        .print-page td:nth-child(even) {
+          color: #1F2329 !important;
+        }
+        .print-page td[colspan] {
+          font-weight: 600 !important;
+          color: #000000 !important;
+        }
+      `;
+      container.appendChild(exportStyle);
       document.body.appendChild(container);
 
       const pageElements = Array.from(
@@ -196,6 +232,42 @@ const TemplatePreview = ({
       container.style.cssText =
         `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;background:#fff;font-family:system-ui,-apple-system,sans-serif;`;
       container.innerHTML = content;
+
+      const exportStyle = document.createElement('style');
+      exportStyle.textContent = `
+        .print-page table {
+          border-collapse: collapse !important;
+          width: 100% !important;
+          table-layout: fixed !important;
+        }
+        .print-page col:first-child,
+        .print-page col:nth-child(3) { width: 110px !important; }
+        .print-page col:nth-child(2),
+        .print-page col:nth-child(4) { width: auto !important; }
+        .print-page td {
+          border: 1px solid #333333 !important;
+          padding: 3px 6px !important;
+          font-size: 11px !important;
+          line-height: 16px !important;
+          vertical-align: top !important;
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
+          background: #FFFFFF !important;
+        }
+        .print-page td:nth-child(odd) {
+          width: 110px !important;
+          font-weight: 600 !important;
+          color: #000000 !important;
+        }
+        .print-page td:nth-child(even) {
+          color: #1F2329 !important;
+        }
+        .print-page td[colspan] {
+          font-weight: 600 !important;
+          color: #000000 !important;
+        }
+      `;
+      container.appendChild(exportStyle);
       document.body.appendChild(container);
 
       const pageElements = Array.from(
