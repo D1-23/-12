@@ -322,6 +322,14 @@ const TemplateConfig = ({
           </div>
         </div>
 
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={draft.hideEmptyFields ?? false}
+            onCheckedChange={(v) => setDraft((prev) => ({ ...prev, hideEmptyFields: v === true }))}
+          />
+          <span className="text-xs text-foreground">隐藏空值字段</span>
+        </div>
+
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs text-muted-foreground">

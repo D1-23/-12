@@ -1,8 +1,8 @@
 export type FieldLevel = 'single' | 'full' | 'block';
 
-export const LABEL_WIDTH = 110;
-export const LINE_HEIGHT = 16;
-export const UNIT_MIN_HEIGHT = 23;
+export const LABEL_WIDTH = 100;
+export const LINE_HEIGHT = 18;
+export const UNIT_MIN_HEIGHT = 28;
 export const UNIT_GAP = 0;
 export const COLUMN_GAP_PX = 16;
 

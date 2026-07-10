@@ -13,6 +13,7 @@ export interface PreviewCanvasHandle {
 interface PreviewCanvasProps {
   records: Array<Record<string, unknown>>;
   enabledFields: string[];
+  hideEmptyFields?: boolean;
   margin: MarginOption;
   fontSize: FontSizeOption;
   titleField: string;
@@ -37,6 +38,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     {
       records,
       enabledFields,
+      hideEmptyFields,
       fontSize,
       titleField,
       pageWidth,
@@ -95,6 +97,30 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
         if (!node) return '';
         const clone = node.cloneNode(true) as HTMLElement;
         clone.querySelectorAll('[data-sig-empty], [data-sig-outside]').forEach((el) => el.remove());
+
+        const STYLE_PROPS = [
+          'width', 'height', 'border', 'border-collapse', 'table-layout',
+          'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+          'margin-top', 'margin-bottom',
+          'font-size', 'font-weight', 'color', 'background-color',
+          'line-height', 'text-align', 'vertical-align',
+          'word-break', 'overflow-wrap',
+          'box-sizing', 'display', 'flex', 'justify-content', 'align-items',
+          'border-top', 'border-bottom', 'border-left', 'border-right',
+          'position', 'top', 'bottom', 'left', 'right',
+          'overflow', 'text-overflow', 'white-space',
+        ];
+        clone.querySelectorAll('*').forEach((el) => {
+          const htmlEl = el as HTMLElement;
+          const computed = window.getComputedStyle(htmlEl);
+          const pairs: string[] = [];
+          STYLE_PROPS.forEach((prop) => {
+            const value = computed.getPropertyValue(prop);
+            if (value) pairs.push(`${prop}: ${value}`);
+          });
+          if (pairs.length > 0) htmlEl.setAttribute('style', pairs.join('; '));
+        });
+
         return clone.innerHTML;
       },
       getPageElements: () => {
@@ -128,19 +154,20 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
           fieldTypes,
           contentWidthMm,
           fontSize: fs,
+          hideEmptyFields,
         }),
       );
-    }, [records, enabledFields, fieldTypes, contentWidthMm, fs]);
+    }, [records, enabledFields, fieldTypes, contentWidthMm, fs, hideEmptyFields]);
 
     const labelTdStyle: React.CSSProperties = {
       width: LABEL_WIDTH,
       background: '#FFFFFF',
       border: '1px solid #333333',
-      padding: '3px 6px',
-      fontSize: 11,
+      padding: '5px 8px',
+      fontSize: fs,
       fontWeight: 600,
       color: '#000000',
-      lineHeight: '16px',
+      lineHeight: '18px',
       textAlign: 'left',
       verticalAlign: 'top',
       wordBreak: 'break-all',
@@ -150,10 +177,10 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const valueTdStyle: React.CSSProperties = {
       background: '#FFFFFF',
       border: '1px solid #333333',
-      padding: '3px 6px',
-      fontSize: 11,
+      padding: '5px 8px',
+      fontSize: fs,
       color: '#1F2329',
-      lineHeight: '16px',
+      lineHeight: '18px',
       textAlign: 'left',
       verticalAlign: 'top',
       wordBreak: 'break-word',
