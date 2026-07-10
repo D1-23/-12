@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { showToast } from '@/api/bitable';
 import type { PrintTemplate, FontSizeOption } from '@/types/template';
-import { mmToPx, FONT_SIZE_LABELS } from '@/types/template';
+import { mmToPx, FONT_SIZE_LABELS, FONT_SIZES } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
 import FieldSettingsDialog from './FieldSettingsDialog';
 import SignaturePad from './SignaturePad';
@@ -125,8 +125,10 @@ const TemplatePreview = ({
     const pageWidthPx = Math.round(mmToPx(template.pageWidth));
     const pageHeightPx = Math.round(mmToPx(template.pageHeight));
 
-    try {
-      const { default: html2canvas } = await import('html2canvas');
+      const exportFs = FONT_SIZES[template.fontSize];
+
+      try {
+        const { default: html2canvas } = await import('html2canvas');
 
       const container = document.createElement('div');
       container.style.cssText =
@@ -147,8 +149,8 @@ const TemplatePreview = ({
         .print-page td {
           border: 1px solid #333333 !important;
           padding: 3px 6px !important;
-          font-size: 11px !important;
-          line-height: 16px !important;
+          font-size: ${exportFs}px !important;
+          line-height: ${Math.round(exportFs * 1.4)}px !important;
           vertical-align: top !important;
           word-break: break-word !important;
           overflow-wrap: break-word !important;
