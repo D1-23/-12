@@ -3,6 +3,7 @@ export type MarginOption = 'narrow' | 'standard' | 'wide';
 export type FontSizeOption = 'small' | 'medium' | 'large';
 export type PaperSize = 'A4' | 'A3' | 'A5' | 'Letter' | 'Custom';
 export type Orientation = 'portrait' | 'landscape';
+export type HeaderFooterAlignment = 'left' | 'center' | 'right';
 
 export interface PageMargins {
   top: number;
@@ -17,6 +18,12 @@ export interface SignatureArea {
   yMm: number;
   widthMm: number;
   heightMm: number;
+}
+
+export interface HeaderFooterConfig {
+  text: string;
+  fontSize: number;
+  alignment: HeaderFooterAlignment;
 }
 
 export interface PrintTemplate {
@@ -35,6 +42,10 @@ export interface PrintTemplate {
   pageHeight: number;
   margins: PageMargins;
   signatureAreas?: SignatureArea[];
+  showHeader?: boolean;
+  showFooter?: boolean;
+  header?: HeaderFooterConfig;
+  footer?: HeaderFooterConfig;
 }
 
 export const MARGIN_LABELS: Record<MarginOption, string> = {
@@ -92,36 +103,70 @@ export const DEFAULT_PAGE_MARGINS: PageMargins = {
   left: 25,
 };
 
+export const DEFAULT_HEADER: HeaderFooterConfig = {
+  text: '',
+  fontSize: 10,
+  alignment: 'center',
+};
+
+export const DEFAULT_FOOTER: HeaderFooterConfig = {
+  text: '第 {{page_number}} / {{total_pages}} 页',
+  fontSize: 10,
+  alignment: 'center',
+};
+
 export function mmToPx(mm: number): number {
   return mm * 3.779527559;
 }
 
+export function replaceTemplateVars(
+  text: string,
+  pageNumber: number,
+  totalPages: number,
+  tableName: string,
+  printTime: string,
+): string {
+  return text
+    .replace(/\{\{page_number\}\}/g, String(pageNumber))
+    .replace(/\{\{total_pages\}\}/g, String(totalPages))
+    .replace(/\{\{table_name\}\}/g, tableName)
+    .replace(/\{\{print_time\}\}/g, printTime);
+}
+
 export function migrateTemplate(t: PrintTemplate): PrintTemplate {
   const base = t.type === 'record' ? t : { ...t, type: 'record' as TemplateType };
-  if (base.paperSize && base.margins) {
-    if (!base.signatureAreas) return { ...base, signatureAreas: [] };
-    return base;
-  }
   const marginVal = MARGIN_VALUES[t.margin] || 25;
+
+  const result: PrintTemplate = (base.paperSize && base.margins)
+    ? (base.signatureAreas ? base : { ...base, signatureAreas: [] })
+    : {
+        ...t,
+        type: 'record' as TemplateType,
+        paperSize: 'A4' as PaperSize,
+        orientation: 'portrait' as Orientation,
+        pageWidth: 210,
+        pageHeight: 297,
+        margins: {
+          top: marginVal,
+          right: marginVal,
+          bottom: marginVal,
+          left: marginVal,
+        },
+      };
+
   return {
-    ...t,
-    paperSize: 'A4',
-    orientation: 'portrait',
-    pageWidth: 210,
-    pageHeight: 297,
-    margins: {
-      top: marginVal,
-      right: marginVal,
-      bottom: marginVal,
-      left: marginVal,
-    },
+    ...result,
+    showHeader: result.showHeader ?? false,
+    showFooter: result.showFooter ?? false,
+    header: result.header ?? { ...DEFAULT_HEADER },
+    footer: result.footer ?? { ...DEFAULT_FOOTER },
   };
 }
 
 const STORAGE_KEY = 'docugenius_templates';
 const ACTIVE_KEY = 'docugenius_active_template_id';
 
-export function loadTemplates(): PrintTemplate[] {
+function loadTemplatesLocal(): PrintTemplate[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw) as PrintTemplate[];
@@ -131,16 +176,64 @@ export function loadTemplates(): PrintTemplate[] {
   return [];
 }
 
-export function saveTemplates(templates: PrintTemplate[]): void {
+function saveTemplatesLocal(templates: PrintTemplate[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
 }
 
-export function loadActiveId(): string | null {
+function loadActiveIdLocal(): string | null {
   return localStorage.getItem(ACTIVE_KEY);
 }
 
-export function saveActiveId(id: string): void {
+function saveActiveIdLocal(id: string): void {
   localStorage.setItem(ACTIVE_KEY, id);
+}
+
+export async function loadTemplates(): Promise<PrintTemplate[]> {
+  try {
+    const { bridgeGetData } = await import('@/api/bitable');
+    const data = await bridgeGetData<PrintTemplate[]>(STORAGE_KEY);
+    if (data != null && Array.isArray(data)) {
+      saveTemplatesLocal(data);
+      return data;
+    }
+  } catch {
+    // Bridge not available
+  }
+  return loadTemplatesLocal();
+}
+
+export async function saveTemplates(templates: PrintTemplate[]): Promise<void> {
+  saveTemplatesLocal(templates);
+  try {
+    const { bridgeSetData } = await import('@/api/bitable');
+    await bridgeSetData(STORAGE_KEY, templates);
+  } catch {
+    // Bridge not available
+  }
+}
+
+export async function loadActiveId(): Promise<string | null> {
+  try {
+    const { bridgeGetData } = await import('@/api/bitable');
+    const data = await bridgeGetData<string>(ACTIVE_KEY);
+    if (data) {
+      saveActiveIdLocal(data);
+      return data;
+    }
+  } catch {
+    // Bridge not available
+  }
+  return loadActiveIdLocal();
+}
+
+export async function saveActiveId(id: string): Promise<void> {
+  saveActiveIdLocal(id);
+  try {
+    const { bridgeSetData } = await import('@/api/bitable');
+    await bridgeSetData(ACTIVE_KEY, id);
+  } catch {
+    // Bridge not available
+  }
 }
 
 export function generateId(): string {

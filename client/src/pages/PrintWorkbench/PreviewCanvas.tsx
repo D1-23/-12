@@ -1,6 +1,6 @@
 import { useMemo, useRef, useImperativeHandle, forwardRef, useCallback, useState } from 'react';
-import type { MarginOption, FontSizeOption, PageMargins, SignatureArea } from '@/types/template';
-import { FONT_SIZES, mmToPx } from '@/types/template';
+import type { MarginOption, FontSizeOption, PageMargins, SignatureArea, HeaderFooterConfig } from '@/types/template';
+import { FONT_SIZES, mmToPx, replaceTemplateVars } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
 import { buildMergedRows, type MergedRow } from './layout-engine';
 import SignatureLayer from './SignatureLayer';
@@ -24,6 +24,10 @@ interface PreviewCanvasProps {
   signatureAreas: SignatureArea[];
   signatureData: Record<string, string>;
   signatureEditMode: boolean;
+  showHeader: boolean;
+  showFooter: boolean;
+  header?: HeaderFooterConfig;
+  footer?: HeaderFooterConfig;
   onSign: (recordIdx: number, areaId: string) => void;
   onMoveSig: (areaId: string, xMm: number, yMm: number) => void;
 }
@@ -43,6 +47,10 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
       signatureAreas,
       signatureData,
       signatureEditMode,
+      showHeader,
+      showFooter,
+      header,
+      footer,
       onSign,
       onMoveSig,
     },
@@ -214,8 +222,24 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             marginBottom: 30,
             position: 'relative',
           }}
-        >
-          {title && (
+          >
+            {showHeader && header?.text && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: Math.round(marginsPx.top * 0.35),
+                  left: marginsPx.left,
+                  right: marginsPx.right,
+                  fontSize: header.fontSize,
+                  textAlign: header.alignment,
+                  color: '#86909C',
+                  lineHeight: '14px',
+                }}
+              >
+                {replaceTemplateVars(header.text, recordIdx + 1, totalRecords, tableName, printTime)}
+              </div>
+            )}
+            {title && (
             <div
               style={{
                 fontSize: 13,
@@ -269,6 +293,22 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               第 {recordIdx + 1} / {totalRecords} 条
             </span>
           </div>
+          {showFooter && footer?.text && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: Math.round(marginsPx.bottom * 0.35),
+                left: marginsPx.left,
+                right: marginsPx.right,
+                fontSize: footer.fontSize,
+                textAlign: footer.alignment,
+                color: '#86909C',
+                lineHeight: '14px',
+              }}
+            >
+              {replaceTemplateVars(footer.text, recordIdx + 1, totalRecords, tableName, printTime)}
+            </div>
+          )}
         </div>
       );
     };

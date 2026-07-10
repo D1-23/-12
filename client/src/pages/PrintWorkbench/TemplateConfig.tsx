@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { PrintTemplate, MarginOption, FontSizeOption, PaperSize, Orientation, PageMargins, SignatureArea } from '@/types/template';
+import type { PrintTemplate, MarginOption, FontSizeOption, PaperSize, Orientation, PageMargins, SignatureArea, HeaderFooterAlignment } from '@/types/template';
 import {
   MARGIN_LABELS,
   FONT_SIZE_LABELS,
@@ -28,6 +28,8 @@ import {
   ORIENTATION_LABELS,
   PAPER_SIZES,
   DEFAULT_PAGE_MARGINS,
+  DEFAULT_HEADER,
+  DEFAULT_FOOTER,
   generateId,
 } from '@/types/template';
 
@@ -368,6 +370,102 @@ const TemplateConfig = ({
               在预览页面中可拖拽签名位置并手写签名
             </div>
           </div>
+
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">
+            页眉页脚
+          </label>
+          <div className="border border-border rounded-md p-2.5 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={draft.showHeader ?? false}
+                onCheckedChange={(v) => setDraft((prev) => ({ ...prev, showHeader: v === true }))}
+              />
+              <span className="text-xs text-foreground">页眉</span>
+              {draft.showHeader && (
+                <Input
+                  className="h-7 text-xs flex-1"
+                  placeholder="页眉文本"
+                  value={draft.header?.text ?? ''}
+                  onChange={(e) => setDraft((prev) => ({
+                    ...prev,
+                    header: { ...(prev.header ?? DEFAULT_HEADER), text: e.target.value },
+                  }))}
+                />
+              )}
+            </div>
+            {draft.showHeader && draft.header && (
+              <div className="flex items-center gap-2 ml-6">
+                <div className="flex items-center rounded-md border border-border overflow-hidden h-7">
+                  {(['left', 'center', 'right'] as HeaderFooterAlignment[]).map((al) => (
+                    <button
+                      key={al}
+                      type="button"
+                      onClick={() => setDraft((prev) => ({
+                        ...prev,
+                        header: { ...(prev.header ?? DEFAULT_HEADER), alignment: al },
+                      }))}
+                      className={`px-2 text-[10px] h-full transition-colors ${
+                        draft.header?.alignment === al
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {al === 'left' ? '左' : al === 'center' ? '中' : '右'}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  支持 {'{{page_number}}'} {'{{total_pages}}'} {'{{table_name}}'} {'{{print_time}}'}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={draft.showFooter ?? false}
+                onCheckedChange={(v) => setDraft((prev) => ({ ...prev, showFooter: v === true }))}
+              />
+              <span className="text-xs text-foreground">页脚</span>
+              {draft.showFooter && (
+                <Input
+                  className="h-7 text-xs flex-1"
+                  placeholder="页脚文本"
+                  value={draft.footer?.text ?? ''}
+                  onChange={(e) => setDraft((prev) => ({
+                    ...prev,
+                    footer: { ...(prev.footer ?? DEFAULT_FOOTER), text: e.target.value },
+                  }))}
+                />
+              )}
+            </div>
+            {draft.showFooter && draft.footer && (
+              <div className="flex items-center gap-2 ml-6">
+                <div className="flex items-center rounded-md border border-border overflow-hidden h-7">
+                  {(['left', 'center', 'right'] as HeaderFooterAlignment[]).map((al) => (
+                    <button
+                      key={al}
+                      type="button"
+                      onClick={() => setDraft((prev) => ({
+                        ...prev,
+                        footer: { ...(prev.footer ?? DEFAULT_FOOTER), alignment: al },
+                      }))}
+                      className={`px-2 text-[10px] h-full transition-colors ${
+                        draft.footer?.alignment === al
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card text-muted-foreground hover:bg-accent'
+                      }`}
+                    >
+                      {al === 'left' ? '左' : al === 'center' ? '中' : '右'}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  支持 {'{{page_number}}'} {'{{total_pages}}'} {'{{table_name}}'} {'{{print_time}}'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
 
         {draft.fields.length > 0 && (
           <div>
