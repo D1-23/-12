@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal, X, PenLine } from 'lucide-react';
+import { ArrowLeft, Printer, Settings, FileDown, ImageDown, CheckSquare, SlidersHorizontal, X, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { showToast } from '@/api/bitable';
@@ -182,6 +182,80 @@ const TemplatePreview = ({
     }
   }, [template]);
 
+  const handleExportImage = useCallback(async () => {
+    const content = previewRef.current?.getContent();
+    if (!content) return;
+
+    const pageWidthPx = Math.round(mmToPx(template.pageWidth));
+    const pageHeightPx = Math.round(mmToPx(template.pageHeight));
+
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+
+      const container = document.createElement('div');
+      container.style.cssText =
+        `position:fixed;left:-9999px;top:0;width:${pageWidthPx}px;background:#fff;font-family:system-ui,-apple-system,sans-serif;`;
+      container.innerHTML = content;
+      document.body.appendChild(container);
+
+      const pageElements = Array.from(
+        container.querySelectorAll('.print-page'),
+      ) as HTMLElement[];
+
+      pageElements.forEach((el) => {
+        el.style.height = `${pageHeightPx}px`;
+        el.style.width = `${pageWidthPx}px`;
+        el.style.marginBottom = '0';
+      });
+
+      const canvases: HTMLCanvasElement[] = [];
+      for (const el of pageElements) {
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+        });
+        canvases.push(canvas);
+      }
+
+      document.body.removeChild(container);
+
+      const totalHeight = canvases.reduce((sum, c) => sum + c.height, 0);
+      const merged = document.createElement('canvas');
+      merged.width = canvases[0].width;
+      merged.height = totalHeight;
+      const ctx = merged.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context unavailable');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, merged.width, merged.height);
+
+      let offsetY = 0;
+      for (const c of canvases) {
+        ctx.drawImage(c, 0, offsetY);
+        offsetY += c.height;
+      }
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const blob: Blob = await new Promise((resolve, reject) => {
+        merged.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error('toBlob failed'));
+        }, 'image/png');
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${template.name}_${dateStr}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      void showToast('长图已生成', 'success');
+    } catch (err) {
+      logger.error('长图导出失败', String(err));
+      void showToast('长图导出失败', 'error');
+    }
+  }, [template]);
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card shrink-0">
@@ -300,6 +374,16 @@ const TemplatePreview = ({
             {sigEditMode ? '完成' : '签名'}
           </Button>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs gap-1"
+          onClick={handleExportImage}
+          disabled={displayCount === 0 || template.fields.length === 0}
+        >
+          <ImageDown className="size-3.5" />
+          长图
+        </Button>
         <Button
           variant="outline"
           size="sm"
