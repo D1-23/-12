@@ -28,13 +28,12 @@ export interface LayoutParams {
   fieldTypes: Record<string, number>;
   contentWidthMm: number;
   fontSize: number;
-  hideEmptyFields?: boolean;
 }
 
 const NUM_COLS = 2;
 
 export function buildMergedRows(params: LayoutParams): MergedRow[] {
-  const { fields, record, fieldTypes, contentWidthMm, hideEmptyFields } = params;
+  const { fields, record, fieldTypes, contentWidthMm } = params;
 
   const contentWidthPx = Math.round(mmToPx(contentWidthMm));
   const valueWidthPx = Math.round(
@@ -42,7 +41,7 @@ export function buildMergedRows(params: LayoutParams): MergedRow[] {
   );
   const fullWidthValuePx = contentWidthPx - LABEL_WIDTH;
 
-  const allUnits: FieldUnit[] = fields.map((field) => {
+  const units: FieldUnit[] = fields.map((field) => {
     const rawValue = record[field];
     const type = fieldTypes[field];
     const formatted = formatFieldValue(rawValue, type);
@@ -54,10 +53,6 @@ export function buildMergedRows(params: LayoutParams): MergedRow[] {
     );
     return { field, value: formatted, level, height };
   });
-
-  const units: FieldUnit[] = hideEmptyFields
-    ? allUnits.filter((u) => u.value !== '')
-    : allUnits;
 
   const columns: FieldUnit[][] = Array.from({ length: NUM_COLS }, () => []);
   const fullWidthUnits: FieldUnit[] = [];

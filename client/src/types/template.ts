@@ -46,7 +46,6 @@ export interface PrintTemplate {
   showFooter?: boolean;
   header?: HeaderFooterConfig;
   footer?: HeaderFooterConfig;
-  hideEmptyFields?: boolean;
 }
 
 export const MARGIN_LABELS: Record<MarginOption, string> = {
@@ -164,7 +163,6 @@ export function migrateTemplate(t: PrintTemplate): PrintTemplate {
     showFooter: result.showFooter ?? false,
     header: result.header ?? { ...DEFAULT_HEADER },
     footer: result.footer ?? { ...DEFAULT_FOOTER },
-    hideEmptyFields: result.hideEmptyFields ?? false,
   };
 }
 
