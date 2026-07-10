@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, useMemo } from 'react';
 import { ArrowLeft, Printer, Settings, FileDown, CheckSquare, SlidersHorizontal, X, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from '@lark-apaas/client-toolkit/logger';
+import { showToast } from '@/api/bitable';
 import type { PrintTemplate } from '@/types/template';
 import { mmToPx } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
@@ -100,10 +101,20 @@ const TemplatePreview = ({
     const printArea = document.getElementById('print-area');
     if (content && printArea) {
       printArea.innerHTML = content;
+      const orientation = template.orientation === 'landscape' ? 'landscape' : 'portrait';
+      const pageSize = template.paperSize === 'Custom' ? 'auto' : template.paperSize;
+      const styleEl = document.createElement('style');
+      styleEl.id = 'print-orientation';
+      styleEl.textContent = `@media print { @page { size: ${pageSize} ${orientation}; margin: 0; } }`;
+      document.head.appendChild(styleEl);
       window.print();
+      document.head.removeChild(styleEl);
       printArea.innerHTML = '';
+      void showToast('打印已发送', 'success');
+    } else {
+      void showToast('打印失败：无内容可打印', 'error');
     }
-  }, []);
+  }, [template]);
 
   const handleExportPdf = useCallback(async () => {
     const content = previewRef.current?.getContent();
@@ -164,8 +175,10 @@ const TemplatePreview = ({
 
       const dateStr = new Date().toISOString().slice(0, 10);
       pdf.save(`${template.name}_${dateStr}.pdf`);
+      void showToast('PDF 已生成', 'success');
     } catch (err) {
       logger.error('PDF导出失败', String(err));
+      void showToast('PDF 导出失败', 'error');
     }
   }, [template]);
 
@@ -240,6 +253,10 @@ const TemplatePreview = ({
           signatureAreas={signatureAreas}
           signatureData={signatureData}
           signatureEditMode={sigEditMode}
+          showHeader={template.showHeader ?? false}
+          showFooter={template.showFooter ?? false}
+          header={template.header}
+          footer={template.footer}
           onSign={handleSign}
           onMoveSig={handleMoveSig}
         />

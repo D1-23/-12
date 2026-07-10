@@ -45,6 +45,10 @@ function createDefaultTemplates(allFields: string[]): PrintTemplate[] {
       pageHeight: 297,
       margins: { ...DEFAULT_PAGE_MARGINS },
       signatureAreas: [],
+      showHeader: false,
+      showFooter: true,
+      header: { text: '', fontSize: 10, alignment: 'center' },
+      footer: { text: '第 {{page_number}} / {{total_pages}} 页', fontSize: 10, alignment: 'center' },
     },
   ];
 }
@@ -65,24 +69,24 @@ const PrintWorkbench = () => {
   } = useBitableData();
 
   useEffect(() => {
-    const initTemplates = () => {
+    const initTemplates = async () => {
       if (loading) return;
       const fields = allFields.length > 0 ? allFields : extractFieldsFromRecords(allRecords);
-      const stored = loadTemplates().map(migrateTemplate).map((t) =>
+      const stored = (await loadTemplates()).map(migrateTemplate).map((t) =>
         t.type === 'record' ? t : { ...t, type: 'record' as const }
       );
       if (stored.length > 0) {
         setTemplates(stored);
         if (stored.some((t) => !t.paperSize)) {
-          saveTemplates(stored);
+          void saveTemplates(stored);
         }
       } else {
         const defaults = createDefaultTemplates(fields);
         setTemplates(defaults);
-        saveTemplates(defaults);
+        void saveTemplates(defaults);
       }
     };
-    initTemplates();
+    void initTemplates();
   }, [loading]);
 
   const autoSwitchedIdRef = useRef<string | null>(null);
@@ -123,10 +127,14 @@ const PrintWorkbench = () => {
         pageHeight: 297,
         margins: { ...DEFAULT_PAGE_MARGINS },
         signatureAreas: [],
+        showHeader: false,
+        showFooter: true,
+        header: { text: '', fontSize: 10, alignment: 'center' },
+        footer: { text: '第 {{page_number}} / {{total_pages}} 页', fontSize: 10, alignment: 'center' },
       };
       const updated = [...templates, newTemplate];
       setTemplates(updated);
-      saveTemplates(updated);
+      void saveTemplates(updated);
       setActiveTemplateId(newTemplate.id);
       setView('preview');
     },
@@ -138,7 +146,7 @@ const PrintWorkbench = () => {
       if (templates.length <= 1) return;
       const updated = templates.filter((t) => t.id !== id);
       setTemplates(updated);
-      saveTemplates(updated);
+      void saveTemplates(updated);
       if (activeTemplateId === id) {
         setActiveTemplateId(null);
         setView('list');
@@ -159,7 +167,7 @@ const PrintWorkbench = () => {
       };
       const updated = [...templates, copy];
       setTemplates(updated);
-      saveTemplates(updated);
+      void saveTemplates(updated);
     },
     [templates]
   );
@@ -170,7 +178,7 @@ const PrintWorkbench = () => {
         t.id === updated.id ? updated : t
       );
       setTemplates(newTemplates);
-      saveTemplates(newTemplates);
+      void saveTemplates(newTemplates);
     },
     [templates]
   );
@@ -181,7 +189,7 @@ const PrintWorkbench = () => {
         t.id === templateId ? { ...t, fields } : t
       );
       setTemplates(newTemplates);
-      saveTemplates(newTemplates);
+      void saveTemplates(newTemplates);
     },
     [templates]
   );
@@ -192,7 +200,7 @@ const PrintWorkbench = () => {
         t.id === templateId ? { ...t, signatureAreas: areas } : t
       );
       setTemplates(newTemplates);
-      saveTemplates(newTemplates);
+      void saveTemplates(newTemplates);
     },
     [templates]
   );

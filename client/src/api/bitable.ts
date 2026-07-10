@@ -14,7 +14,7 @@ export interface FieldMeta {
 let sdkModule: typeof import('@lark-base-open/js-sdk') | null = null;
 let sdkInitFailed = false;
 
-async function getSDK() {
+async function getSDKModule(): Promise<typeof import('@lark-base-open/js-sdk') | null> {
   if (sdkInitFailed) return null;
   if (!sdkModule) {
     try {
@@ -26,7 +26,12 @@ async function getSDK() {
       return null;
     }
   }
-  return sdkModule.bitable;
+  return sdkModule;
+}
+
+async function getSDK() {
+  const mod = await getSDKModule();
+  return mod?.bitable ?? null;
 }
 
 export function isSDKAvailable(): boolean {
@@ -48,7 +53,7 @@ export async function getFieldMetaList(): Promise<FieldMeta[]> {
 export interface RecordsPage {
   records: BitableRecord[];
   hasMore: boolean;
-  pageToken?: string;
+  pageToken?: number;
 }
 
 function mapRecordFields(
@@ -67,14 +72,17 @@ function mapRecordFields(
 
 export async function getRecordsByPage(
   fieldMap: Map<string, string>,
-  pageToken?: string
+  pageToken?: number
 ): Promise<RecordsPage> {
   const sdk = await getSDK();
   if (!sdk) throw new Error('Bitable SDK 不可用');
 
   const table = await sdk.base.getActiveTable();
-  const result = await table.getRecords({ pageSize: 500, pageToken });
-  const records = result.records.map((rec) => mapRecordFields(rec, fieldMap));
+  const result = await table.getRecordsByPage({ pageSize: 500, pageToken });
+  const records = result.records.map(
+    (rec: { recordId: string; fields: Record<string, unknown> }) =>
+      mapRecordFields(rec, fieldMap),
+  );
 
   return {
     records,
@@ -87,7 +95,7 @@ export async function getAllRecords(
   fieldMap: Map<string, string>
 ): Promise<BitableRecord[]> {
   const allRecords: BitableRecord[] = [];
-  let token: string | undefined;
+  let token: number | undefined;
 
   do {
     const page = await getRecordsByPage(fieldMap, token);
@@ -124,13 +132,21 @@ export async function getRecordsByIds(
   if (recordIds.length === 0) return [];
 
   const table = await sdk.base.getActiveTable();
-  const recordValues = await table.getRecordsByIds(recordIds);
-  return recordValues.map((rec, idx) =>
-    mapRecordFields(
-      { recordId: recordIds[idx], fields: rec.fields as Record<string, unknown> },
-      fieldMap,
-    )
+  const results = await Promise.allSettled(
+    recordIds.map((id) => table.getRecordById(id)),
   );
+  const records: BitableRecord[] = [];
+  results.forEach((result, idx) => {
+    if (result.status === 'fulfilled' && result.value) {
+      records.push(
+        mapRecordFields(
+          { recordId: recordIds[idx], fields: result.value.fields as Record<string, unknown> },
+          fieldMap,
+        ),
+      );
+    }
+  });
+  return records;
 }
 
 export async function selectRecordsFromBitable(): Promise<BitableRecord[]> {
@@ -145,18 +161,7 @@ export async function selectRecordsFromBitable(): Promise<BitableRecord[]> {
   const fieldMap = new Map<string, string>();
   for (const m of metaList) fieldMap.set(m.id, m.name);
 
-  const table = await sdk.base.getActiveTable();
-  const records: BitableRecord[] = [];
-  for (const recordId of recordIdList) {
-    const rec = await table.getRecordById(recordId);
-    if (rec) {
-      records.push(mapRecordFields(
-        { recordId, fields: rec.fields as Record<string, unknown> },
-        fieldMap,
-      ));
-    }
-  }
-  return records;
+  return getRecordsByIds(recordIdList, fieldMap);
 }
 
 export async function getTableName(): Promise<string> {
@@ -164,7 +169,7 @@ export async function getTableName(): Promise<string> {
   if (!sdk) return '';
   try {
     const table = await sdk.base.getActiveTable();
-    return (table as { name?: string }).name ?? '';
+    return await table.getName();
   } catch {
     return '';
   }
@@ -191,4 +196,41 @@ export async function getRecordById(
   }
 
   return { id: recordId, record: mapped };
+}
+
+export async function bridgeSetData<T>(key: string, data: T): Promise<boolean> {
+  const sdk = await getSDK();
+  if (!sdk) return false;
+  try {
+    return await sdk.bridge.setData(key, data);
+  } catch (err) {
+    logger.warn(`bridge.setData 失败: ${String(err)}`);
+    return false;
+  }
+}
+
+export async function bridgeGetData<T>(key: string): Promise<T | null> {
+  const sdk = await getSDK();
+  if (!sdk) return null;
+  try {
+    const data = await sdk.bridge.getData<T>(key);
+    return data ?? null;
+  } catch (err) {
+    logger.warn(`bridge.getData 失败: ${String(err)}`);
+    return null;
+  }
+}
+
+export async function showToast(
+  message: string,
+  type: 'info' | 'success' | 'warning' | 'error' = 'info',
+): Promise<void> {
+  const mod = await getSDKModule();
+  if (!mod) return;
+  try {
+    const toastType = mod.ToastType?.[type];
+    await mod.bitable.ui.showToast({ toastType, message });
+  } catch (err) {
+    logger.warn(`showToast 失败: ${String(err)}`);
+  }
 }

@@ -25,7 +25,6 @@ interface UseBitableDataResult {
 
 const MAX_INIT_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
-const POLL_INTERVAL_MS = 2000;
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -45,7 +44,6 @@ export function useBitableData(): UseBitableDataResult {
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const allRecordsLoadedRef = useRef(false);
   const prevSelectionKeyRef = useRef<string>('');
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchSelectedRecord = useCallback(async (recordId: string) => {
     try {
@@ -62,7 +60,7 @@ export function useBitableData(): UseBitableDataResult {
     setRecordsLoading(true);
     try {
       const collected: BitableRecord[] = [];
-      let token: string | undefined;
+      let token: number | undefined;
 
       do {
         const page = await getRecordsByPage(fieldMapRef.current, token);
@@ -142,18 +140,30 @@ export function useBitableData(): UseBitableDataResult {
           await fetchSelectedRecords();
         });
 
+        const activeTable = await sdk.base.getActiveTable();
+        const unsubRecordModify = (
+          activeTable as unknown as {
+            onRecordModify: (cb: () => void) => () => void;
+          }
+        ).onRecordModify(async () => {
+          if (cancelled) return;
+          const sel = await sdk.base.getSelection();
+          if (sel?.recordId) {
+            await fetchSelectedRecord(sel.recordId);
+          }
+          await fetchSelectedRecords();
+        });
+
         if (cancelled) {
           unsub();
+          unsubRecordModify();
           return;
         }
-        unsubscribeRef.current = unsub;
-        logger.info('Bitable 选择监听器注册成功');
-
-        pollTimerRef.current = setInterval(async () => {
-          if (cancelled) return;
-          await fetchSelectedRecords();
-        }, POLL_INTERVAL_MS);
-        logger.info('Bitable 轮询兜底已启动');
+        unsubscribeRef.current = () => {
+          unsub();
+          unsubRecordModify();
+        };
+        logger.info('Bitable 事件监听器注册成功');
       } catch (err: unknown) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : String(err);
@@ -180,10 +190,6 @@ export function useBitableData(): UseBitableDataResult {
       cancelled = true;
       unsubscribeRef.current?.();
       unsubscribeRef.current = null;
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
     };
   }, [fetchSelectedRecord, fetchSelectedRecords]);
 
