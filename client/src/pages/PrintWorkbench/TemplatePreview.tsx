@@ -3,6 +3,7 @@ import { ArrowLeft, Printer, Settings, CheckSquare, SlidersHorizontal, X, PenLin
 import { Button } from '@/components/ui/button';
 import { showToast } from '@/api/bitable';
 import type { PrintTemplate, FontSizeOption } from '@/types/template';
+import type { BitableRecord } from '@/api/bitable';
 import { FONT_SIZE_LABELS } from '@/types/template';
 import PreviewCanvas, { type PreviewCanvasHandle } from './PreviewCanvas';
 import FieldSettingsDialog from './FieldSettingsDialog';
@@ -19,6 +20,9 @@ interface TemplatePreviewProps {
   template: PrintTemplate;
   recordsWithIds: RecordWithId[];
   selectedRecords: RecordWithId[];
+  manualRecords: BitableRecord[];
+  onSelectRecords: () => void;
+  onClearManual: () => void;
   allFields: string[];
   fieldTypes: Record<string, number>;
   tableName: string;
@@ -33,6 +37,9 @@ const TemplatePreview = ({
   template,
   recordsWithIds,
   selectedRecords,
+  manualRecords,
+  onSelectRecords,
+  onClearManual,
   allFields,
   fieldTypes,
   tableName,
@@ -44,6 +51,7 @@ const TemplatePreview = ({
 }: TemplatePreviewProps) => {
   const previewRef = useRef<PreviewCanvasHandle>(null);
   const [batchMode, setBatchMode] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
   const [showFieldDialog, setShowFieldDialog] = useState(false);
   const [batchDismissed, setBatchDismissed] = useState(false);
   const [signatureData, setSignatureData] = useState<Record<string, string>>({});
@@ -51,14 +59,17 @@ const TemplatePreview = ({
   const [sigEditMode, setSigEditMode] = useState(false);
 
   const hasMultipleSelected = selectedRecords.length > 1;
-  const showBatchPrompt = hasMultipleSelected && !batchMode && !batchDismissed;
+  const showBatchPrompt = hasMultipleSelected && !batchMode && !manualMode && !batchDismissed;
 
   const displayRecords = useMemo(() => {
+    if (manualMode && manualRecords.length > 0) {
+      return manualRecords.map((r) => r.record);
+    }
     if (batchMode && selectedRecords.length > 0) {
       return selectedRecords.map((r) => r.record);
     }
     return recordsWithIds.map((r) => r.record);
-  }, [batchMode, selectedRecords, recordsWithIds]);
+  }, [manualMode, manualRecords, batchMode, selectedRecords, recordsWithIds]);
 
   const displayCount = displayRecords.length;
 
@@ -75,6 +86,16 @@ const TemplatePreview = ({
     setBatchMode(false);
     setBatchDismissed(false);
   }, []);
+
+  const handleManualSelect = useCallback(() => {
+    onSelectRecords();
+    setManualMode(true);
+  }, [onSelectRecords]);
+
+  const handleExitManual = useCallback(() => {
+    setManualMode(false);
+    onClearManual();
+  }, [onClearManual]);
 
   const signatureAreas = template.signatureAreas ?? [];
 
@@ -148,6 +169,15 @@ const TemplatePreview = ({
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs gap-1"
+          onClick={handleManualSelect}
+        >
+          <CheckSquare className="size-3.5" />
+          批量选择
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs gap-1"
           onClick={() => setShowFieldDialog(true)}
         >
           <SlidersHorizontal className="size-3.5" />
@@ -188,6 +218,15 @@ const TemplatePreview = ({
         </div>
       )}
 
+      {manualMode && manualRecords.length > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border-b border-primary/20 shrink-0">
+          <CheckSquare className="size-3.5 text-primary shrink-0" />
+          <span className="text-xs text-primary flex-1 truncate">
+            已手动选择 {manualRecords.length} 条记录
+          </span>
+        </div>
+      )}
+
       <div className="flex-1 relative overflow-hidden flex flex-col">
         <PreviewCanvas
           ref={previewRef}
@@ -218,18 +257,33 @@ const TemplatePreview = ({
         <div className="px-2 py-1.5 text-[10px] text-warning bg-warning/10 text-center leading-relaxed">
           {recordsWithIds.length === 0
             ? '暂无数据，请在多维表格中添加记录。'
-            : batchMode
-              ? '未选择记录，请在多维表格中勾选记录。'
-              : '请在多维表格中点击选择一条记录。'}
+            : manualMode
+              ? '未选择记录，请点击「批量选择」重新选取。'
+              : batchMode
+                ? '未选择记录，请在多维表格中勾选记录。'
+                : '请在多维表格中点击选择一条记录。'}
         </div>
       )}
 
       <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card shrink-0">
         <span className="text-[11px] text-muted-foreground truncate flex-1">
-          {template.fields.length} 个字段 · {batchMode
-            ? `${selectedRecords.length} 条记录`
-            : `${recordsWithIds.length > 0 ? 1 : 0} 条记录`}
+          {template.fields.length} 个字段 · {manualMode
+            ? `${manualRecords.length} 条记录`
+            : batchMode
+              ? `${selectedRecords.length} 条记录`
+              : `${recordsWithIds.length > 0 ? 1 : 0} 条记录`}
         </span>
+        {manualMode && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1 text-muted-foreground"
+            onClick={handleExitManual}
+          >
+            <X className="size-3.5" />
+            退出批量
+          </Button>
+        )}
         {batchMode && (
           <Button
             variant="ghost"

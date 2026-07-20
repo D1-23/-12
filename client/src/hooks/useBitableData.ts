@@ -7,6 +7,7 @@ import {
   getSelectedRecordIds,
   getRecordsByIds,
   getTableName,
+  selectRecordsFromBitable,
   type BitableRecord,
 } from '@/api/bitable';
 
@@ -28,6 +29,9 @@ interface UseBitableDataResult {
   loading: boolean;
   loadAllRecords: () => void;
   selectedRecords: BitableRecord[];
+  manualRecords: BitableRecord[];
+  selectRecordsManually: () => Promise<void>;
+  clearManualSelection: () => void;
   fieldTypes: Record<string, number>;
   tableName: string;
 }
@@ -48,6 +52,7 @@ export function useBitableData(): UseBitableDataResult {
   const [sdkAvailable, setSdkAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedRecords, setSelectedRecords] = useState<BitableRecord[]>([]);
+  const [manualRecords, setManualRecords] = useState<BitableRecord[]>([]);
   const [fieldTypes, setFieldTypes] = useState<Record<string, number>>({});
   const [tableName, setTableName] = useState<string>('');
   const fieldMapRef = useRef<Map<string, string>>(new Map());
@@ -203,6 +208,20 @@ export function useBitableData(): UseBitableDataResult {
     };
   }, [fetchSelectedRecord, fetchSelectedRecords]);
 
+  const selectRecordsManually = useCallback(async () => {
+    try {
+      const records = await selectRecordsFromBitable();
+      setManualRecords(records);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error(`手动选择记录失败: ${msg}`);
+    }
+  }, []);
+
+  const clearManualSelection = useCallback(() => {
+    setManualRecords([]);
+  }, []);
+
   return {
     selectedRecord,
     allFields,
@@ -212,6 +231,9 @@ export function useBitableData(): UseBitableDataResult {
     loading,
     loadAllRecords,
     selectedRecords,
+    manualRecords,
+    selectRecordsManually,
+    clearManualSelection,
     fieldTypes,
     tableName,
   };

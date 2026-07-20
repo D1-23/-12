@@ -65,6 +65,9 @@ const PrintWorkbench = () => {
     sdkAvailable,
     loading,
     selectedRecords,
+    manualRecords,
+    selectRecordsManually,
+    clearManualSelection,
     fieldTypes,
     tableName,
   } = useBitableData();
@@ -259,6 +262,9 @@ const PrintWorkbench = () => {
         template={activeTemplate}
         recordsWithIds={defaultRecords}
         selectedRecords={selectedRecords}
+        manualRecords={manualRecords}
+        onSelectRecords={selectRecordsManually}
+        onClearManual={clearManualSelection}
         allFields={allFields}
         fieldTypes={fieldTypes}
         tableName={tableName}
