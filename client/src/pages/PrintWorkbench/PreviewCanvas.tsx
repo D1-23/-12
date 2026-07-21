@@ -1,4 +1,4 @@
-import { useMemo, useRef, useImperativeHandle, forwardRef, useCallback, useState } from 'react';
+import { useMemo, useRef, useImperativeHandle, forwardRef, useCallback, useState, useEffect } from 'react';
 import type { MarginOption, FontSizeOption, PageMargins, SignatureArea, HeaderFooterConfig } from '@/types/template';
 import { FONT_SIZES, mmToPx, replaceTemplateVars } from '@/types/template';
 import { formatFieldValue, formatPrintTime, LABEL_WIDTH } from './field-utils';
@@ -62,6 +62,17 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     const scrollRef = useRef<HTMLDivElement>(null);
     const dragState = useRef<{ startX: number; startY: number; scrollLeft: number; scrollTop: number } | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [containerWidth, setContainerWidth] = useState(360);
+
+    useEffect(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const updateWidth = () => setContainerWidth(el.clientWidth);
+      updateWidth();
+      const observer = new ResizeObserver(() => updateWidth());
+      observer.observe(el);
+      return () => observer.disconnect();
+    }, []);
 
     const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       const el = scrollRef.current;
@@ -119,7 +130,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
     );
 
     const fs = FONT_SIZES[fontSize];
-    const scaledWidth = pageWidthPx * 0.39;
+    const scale = useMemo(() => {
+      const available = containerWidth - 16;
+      const calculated = available / pageWidthPx;
+      return Math.min(Math.max(calculated, 0.25), 1.0);
+    }, [containerWidth, pageWidthPx]);
+    const scaledWidth = pageWidthPx * scale;
     const contentWidthMm = pageWidth - margins.left - margins.right;
 
     const recordMergedRows = useMemo<MergedRow[][]>(() => {
@@ -267,7 +283,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
               recordIdx={recordIdx}
               pageWidthMm={pageWidth}
               pageHeightMm={pageHeight}
-              zoom={0.39}
+              zoom={scale}
               editMode={signatureEditMode}
               onSign={onSign}
               onMove={onMoveSig}
@@ -331,7 +347,7 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
             id="preview-content"
             style={{
               width: pageWidthPx,
-              zoom: 0.39,
+              zoom: scale,
             }}
           >
             {recordMergedRows.map((rows, idx) => renderRecord(rows, idx))}
