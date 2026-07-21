@@ -131,11 +131,12 @@ const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>(
 
     const fs = FONT_SIZES[fontSize];
     const scale = useMemo(() => {
+      if (!pageWidthPx || pageWidthPx <= 0) return 0.4;
       const available = containerWidth - 16;
       const calculated = available / pageWidthPx;
       return Math.min(Math.max(calculated, 0.25), 1.0);
     }, [containerWidth, pageWidthPx]);
-    const scaledWidth = pageWidthPx * scale;
+    const scaledWidth = pageWidthPx > 0 ? pageWidthPx * scale : containerWidth * 0.9;
     const contentWidthMm = pageWidth - margins.left - margins.right;
 
     const recordMergedRows = useMemo<MergedRow[][]>(() => {
