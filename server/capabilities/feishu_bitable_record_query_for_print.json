@@ -1,0 +1,485 @@
+{
+  "id": "feishu_bitable_record_query_for_print",
+  "pluginKey": "@official-plugins/feishu-bitable",
+  "pluginVersion": "1.0.22",
+  "name": "飞书多维表格记录查询（打印专用）",
+  "description": "查询多维表格中的选中记录或视图数据，支持searchRecords和getRecord操作，获取表格字段和记录内容用于打印预览渲染",
+  "icon": "",
+  "paramsSchema": {},
+  "formValue": {
+    "appToken": "STembnZ0paWwg7sE2hNcg60Sn2f",
+    "tableID": "tbly8Y8hV36kXITl",
+    "fields": [
+      {
+        "bizType": "Text",
+        "id": "fldkbKXPDV",
+        "name": "零件代码",
+        "type": 1,
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "bizType": "Text",
+        "id": "fldlsdYwR8",
+        "name": "工厂代码",
+        "type": 1,
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "type": 1,
+        "bizType": "Text",
+        "readable": true,
+        "writeable": true,
+        "id": "fldEmJNq2q",
+        "name": "物料描述"
+      },
+      {
+        "writeable": true,
+        "id": "fld36ByZcN",
+        "name": "单位",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true
+      },
+      {
+        "name": "后勤处理组",
+        "type": 1,
+        "bizType": "Text",
+        "id": "fldmDfzfcL",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "name": "COGI累计数量",
+        "type": 2,
+        "bizType": "Number",
+        "readable": true,
+        "writeable": true,
+        "id": "fld5ozhjht"
+      },
+      {
+        "type": 2,
+        "bizType": "Number",
+        "readable": true,
+        "writeable": true,
+        "id": "flduOYyZWg",
+        "name": "COGI累计条目"
+      },
+      {
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "线边账实不一致",
+          "未及时移库",
+          "MBOM错搭/多搭",
+          "采购排程未完成",
+          "报工差异",
+          "采购收货不及时",
+          "PAE未及时分配任务",
+          "IT原因",
+          "外围系统主数据问题"
+        ],
+        "id": "fldiw9cs79",
+        "readable": true,
+        "writeable": true,
+        "name": "COGI产生原因",
+        "type": 3
+      },
+      {
+        "name": "责任人一",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true,
+        "id": "fldzv3aAjT"
+      },
+      {
+        "enumValues": [
+          "YFAI-AP-APHQ-Directly III-IT Department-Application System of APHQ",
+          "YFAI-AP-重庆公司-工艺-工艺二科",
+          "YFAI-AP-Longxing Plant-Produce（AreaⅠ）",
+          "YFAI-AP-Longxing Plant-Logistics",
+          "YFAI-AP-APHQ-Directly III-IT Department-Application System of Manufacturing",
+          "YFAI-AP-APHQ-Directly III-Procurement Management Department-Direct Procurement Section II",
+          "YFAI-AP-内饰亚太总部-直属III-财务部-项目分析部-项目分析四科",
+          "YFAI-AP-Chongqing Company-Supplier Quality Management",
+          "YFAI-AP-Chongqing Company-Program-Program I"
+        ],
+        "readable": true,
+        "writeable": false,
+        "id": "fld3MImXYM",
+        "name": "责任人一.部门",
+        "type": 4,
+        "bizType": "MultiSelect"
+      },
+      {
+        "readable": true,
+        "writeable": false,
+        "id": "fldEILwXyU",
+        "name": "责任人一.直属上级",
+        "type": 11,
+        "bizType": "User"
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "bizType": "User",
+        "id": "fld3jaVLVt",
+        "name": "责任人一直属上级",
+        "type": 11
+      },
+      {
+        "name": "责任人一直属上级.直属上级",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": false,
+        "id": "fld6mEZnpl"
+      },
+      {
+        "type": 11,
+        "bizType": "User",
+        "id": "fldrcYfFsY",
+        "name": "责任人二",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "name": "责任人二.部门",
+        "type": 4,
+        "bizType": "MultiSelect",
+        "enumValues": [
+          "YFAI-AP-重庆公司-工艺-工艺一科",
+          "YFAI-AP-Longxing Plant-Logistics",
+          "YFAI-AP-Chongqing Company-Program-Program I"
+        ],
+        "readable": true,
+        "writeable": false,
+        "id": "fldaQdRnzm"
+      },
+      {
+        "bizType": "User",
+        "readable": true,
+        "writeable": false,
+        "id": "fldtEmRsh3",
+        "name": "责任人二.直属上级",
+        "type": 11
+      },
+      {
+        "type": 11,
+        "bizType": "User",
+        "id": "fldX7RYM6t",
+        "name": "责任人二直属上级",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "bizType": "User",
+        "readable": true,
+        "writeable": false,
+        "id": "fld82qPKWH",
+        "name": "责任人二直属上级.直属上级",
+        "type": 11
+      },
+      {
+        "name": "责任人三",
+        "type": 11,
+        "bizType": "User",
+        "id": "fldlXYm76h",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "bizType": "MultiSelect",
+        "id": "fldMnZvNk6",
+        "name": "责任人三.部门",
+        "type": 4,
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "writeable": false,
+        "name": "责任人三.直属上级",
+        "type": 11,
+        "bizType": "User",
+        "id": "fldPpfIZ1H",
+        "readable": true
+      },
+      {
+        "name": "责任人三直属上级",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true,
+        "id": "fldAtkFToq"
+      },
+      {
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": false,
+        "id": "fldSJvs57B",
+        "name": "责任人三直属上级.直属上级"
+      },
+      {
+        "bizType": "Formula",
+        "id": "fldAr9jX3M",
+        "name": "开始日期（格式）",
+        "type": 20,
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "id": "fldfRVgvft",
+        "name": "计划完成日期",
+        "type": 20,
+        "bizType": "Formula",
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "bizType": "Number",
+        "id": "fldR7K6c79",
+        "name": "持续天数",
+        "type": 2,
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "readable": true,
+        "writeable": false,
+        "id": "fldt99HiOM",
+        "name": "逾期天数",
+        "type": 20,
+        "bizType": "Formula"
+      },
+      {
+        "bizType": "Text",
+        "id": "fldezqhbk6",
+        "name": "状态",
+        "readable": true,
+        "writeable": true,
+        "type": 1
+      },
+      {
+        "writeable": true,
+        "id": "fldw2QED0i",
+        "name": "当前升级对象",
+        "type": 11,
+        "bizType": "User",
+        "readable": true
+      },
+      {
+        "bizType": "Text",
+        "readable": true,
+        "writeable": true,
+        "id": "fldGpqYHWW",
+        "name": "COGI开始日期（拉取）",
+        "type": 1
+      },
+      {
+        "id": "fldl7hZJSd",
+        "name": "判责人一",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "id": "fldzo5b27E",
+        "name": "判责人一.直属上级",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "id": "fldYnloUXB",
+        "name": "判责人一直属上级",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "readable": true,
+        "writeable": false,
+        "name": "判责人一直属上级.直属上级",
+        "type": 11,
+        "bizType": "User",
+        "id": "fldi6mmZzr"
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "type": 11,
+        "bizType": "User",
+        "id": "fldN4QvIBI",
+        "name": "判责人二"
+      },
+      {
+        "name": "判责人二.直属上级",
+        "type": 11,
+        "readable": true,
+        "writeable": false,
+        "bizType": "User",
+        "id": "fldzNgYwdw"
+      },
+      {
+        "id": "fldVcmXQTG",
+        "name": "判责人二直属上级",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "bizType": "User",
+        "readable": true,
+        "writeable": false,
+        "id": "fldHO6HqjS",
+        "name": "判责人二直属上级.直属上级",
+        "type": 11
+      },
+      {
+        "name": "判责人三",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true,
+        "id": "fldOs5EMNw"
+      },
+      {
+        "name": "判责人三.直属上级",
+        "type": 11,
+        "bizType": "User",
+        "id": "fldxSQF6u0",
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "id": "fldIcuK098",
+        "name": "判责人三直属上级",
+        "type": 11,
+        "bizType": "User"
+      },
+      {
+        "writeable": false,
+        "type": 11,
+        "bizType": "User",
+        "id": "fldBevGX2m",
+        "name": "判责人三直属上级.直属上级",
+        "readable": true
+      },
+      {
+        "name": "判责人四",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true,
+        "id": "fldYfIYpcD"
+      },
+      {
+        "id": "fldUYaxi9e",
+        "name": "判责人四.直属上级",
+        "readable": true,
+        "writeable": false,
+        "type": 11,
+        "bizType": "User"
+      },
+      {
+        "bizType": "User",
+        "id": "fld0FISUSU",
+        "name": "判责人四直属上级",
+        "type": 11,
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "bizType": "User",
+        "id": "fld6aohYPu",
+        "name": "判责人四直属上级.直属上级",
+        "type": 11,
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "id": "fldMnMrZI2",
+        "name": "库控判责日期",
+        "type": 5,
+        "readable": true,
+        "writeable": true,
+        "bizType": "DateTime"
+      },
+      {
+        "bizType": "ModifiedTime",
+        "id": "fld53edifa",
+        "name": "最后更新时间",
+        "type": 1002,
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "id": "fldm9wWEh9",
+        "name": "记录创建时间",
+        "readable": true,
+        "writeable": false,
+        "type": 1001,
+        "bizType": "CreatedTime"
+      },
+      {
+        "writeable": true,
+        "id": "fldsoXMNjP",
+        "name": "COGI创建时间",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true
+      },
+      {
+        "type": 20,
+        "bizType": "Formula",
+        "id": "fldz2pLJGJ",
+        "name": "判责人是否可见",
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "id": "fld8bOr4TX",
+        "name": "工厂零件号",
+        "type": 20,
+        "bizType": "Formula",
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "type": 20,
+        "bizType": "Formula",
+        "id": "fldWmWkc8f",
+        "name": "COGI创建时间（格式化）",
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "id": "fldrlmgzwf",
+        "name": "持续时间区间",
+        "type": 20,
+        "bizType": "Formula",
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "writeable": false,
+        "type": 18,
+        "bizType": "SingleLink",
+        "id": "fldmqFnyB9",
+        "name": "父记录",
+        "readable": false
+      }
+    ]
+  },
+  "createdAt": 1783062225049,
+  "updatedAt": 1783063404606,
+  "createdBy": 7623683985687710684
+}
