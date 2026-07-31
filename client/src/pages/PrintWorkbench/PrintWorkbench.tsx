@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { FileText } from 'lucide-react';
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty';
+import { FileText, AlertTriangle, TableProperties, RefreshCw } from 'lucide-react';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from '@/components/ui/empty';
+import { Button } from '@/components/ui/button';
 import type { PrintTemplate, SignatureArea } from '@/types/template';
 import { loadTemplates, saveTemplates, migrateTemplate, DEFAULT_PAGE_MARGINS } from '@/types/template';
 import { useBitableData } from '@/hooks/useBitableData';
@@ -212,6 +220,60 @@ const PrintWorkbench = () => {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-xs text-muted-foreground">加载中...</div>
+      </div>
+    );
+  }
+
+  // 场景一：无法获取多维表格数据结构（SDK 初始化重试耗尽）
+  // 提供明确引导，避免用户在空白界面中困惑
+  if (!sdkAvailable) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <AlertTriangle className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>无法连接多维表格</EmptyTitle>
+            <EmptyDescription>
+              插件未能读取当前多维表格的数据结构。请确认已在多维表格中打开本插件，然后重试。
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button size="sm" onClick={() => window.location.reload()}>
+              <RefreshCw className="size-4" />
+              重新加载
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              若多次失败，请关闭边栏后重新打开插件
+            </p>
+          </EmptyContent>
+        </Empty>
+      </div>
+    );
+  }
+
+  // 场景二：数据表无字段（空表或仅含附件等不可打印结构）
+  if (allFields.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <TableProperties className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>当前数据表没有可打印字段</EmptyTitle>
+            <EmptyDescription>
+              请在多维表格中添加至少一个文本类字段后，再返回插件重试。
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+              <RefreshCw className="size-4" />
+              添加字段后刷新
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
